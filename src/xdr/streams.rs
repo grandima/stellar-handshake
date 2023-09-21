@@ -14,6 +14,9 @@ impl WriteStream {
     pub fn write_next_u32(&mut self, value: u32) {
         self.result.extend(value.to_be_bytes().iter());
     }
+    pub fn write_next_i32(&mut self, value: i32) {
+        self.result.extend(value.to_be_bytes().iter());
+    }
     pub fn write_next_u64(&mut self, value: u64) {
         self.result.extend(value.to_be_bytes().iter());
     }
@@ -46,6 +49,10 @@ impl<T: AsRef<[u8]>> ReadStream<T> {
     pub fn read_next_u32(&mut self) -> Result<u32, DecodeError> {
         let array: &[u8; 4] = self.read_next_byte_array()?;
         Ok(u32::from_be_bytes(*array))
+    }
+    pub fn read_next_i32(&mut self) -> Result<i32, DecodeError> {
+        let array: &[u8; 4] = self.read_next_byte_array()?;
+        Ok(i32::from_be_bytes(*array))
     }
     pub fn read_next_u64(&mut self) -> Result<u64, DecodeError> {
         let array: &[u8; 8] = self.read_next_byte_array()?;
