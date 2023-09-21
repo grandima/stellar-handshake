@@ -2,6 +2,7 @@ mod keypair_type;
 mod keypair;
 mod node_config;
 mod connection_authentication;
+mod xdr;
 
 use data_encoding::BASE32;
 use keypair::Keypair;
@@ -17,6 +18,6 @@ fn main() {
     let keypair = Keypair::from(data);
     let node_config = NodeConfig::default();
     let authentication = ConnectionAuthentication::new(keypair, node_config.network);
-    println!("Keypair: {:?}", authentication);
+    println!("Authentication: {:?}", authentication);
 
 }
