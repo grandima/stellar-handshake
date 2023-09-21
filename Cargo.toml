@@ -9,3 +9,4 @@ edition = "2021"
 
 data-encoding = "2.3"
 dryoc = "0.5.1"
+sha2 = {version = "0.10.7", features = ["std"]}
