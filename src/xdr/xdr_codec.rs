@@ -15,3 +15,13 @@ impl<const N: usize> XdrCodec for [u8; N] {
         value.try_into().map_err(|_| unreachable!())
     }
 }
+
+impl XdrCodec for u64 {
+    fn to_xdr_buffered(&self, write_stream: &mut WriteStream) {
+        write_stream.write_next_u64(*self);
+    }
+
+    fn from_xdr_buffered<T: AsRef<[u8]>>(read_stream: &mut ReadStream<T>) -> Result<Self, DecodeError> {
+        read_stream.read_next_u64()
+    }
+}

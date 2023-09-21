@@ -11,6 +11,12 @@ impl WriteStream {
         let no_of_padding_bytes = extend_to_multiple_of_4(length) - length;
         self.result.extend(iter::repeat(0).take(no_of_padding_bytes));
     }
+    pub fn write_next_u32(&mut self, value: u32) {
+        self.result.extend(value.to_be_bytes().iter());
+    }
+    pub fn write_next_u64(&mut self, value: u64) {
+        self.result.extend(value.to_be_bytes().iter());
+    }
 }
 pub struct ReadStream<T: AsRef<[u8]>> {
     read_index: usize,
@@ -37,12 +43,41 @@ impl<T: AsRef<[u8]>> ReadStream<T> {
         self.read_index += extend_to_multiple_of_4(no_of_bytes);
         Ok(result)
     }
+    pub fn read_next_u32(&mut self) -> Result<u32, DecodeError> {
+        let array: &[u8; 4] = self.read_next_byte_array()?;
+        Ok(u32::from_be_bytes(*array))
+    }
+    pub fn read_next_u64(&mut self) -> Result<u64, DecodeError> {
+        let array: &[u8; 8] = self.read_next_byte_array()?;
+        Ok(u64::from_be_bytes(*array))
+    }
+
+    fn read_next_byte_array<const N: usize>(&mut self) -> Result<&[u8; N], DecodeError> {
+        let array: Result<&[u8; N], _> = (self.source.as_ref()[self.read_index..self.read_index + N]).try_into();
+
+        match array {
+            Ok(array) => {
+                self.read_index += N;
+                Ok(array)
+            },
+            Err(_) => Err(self.generate_sudden_end_error(N)),
+        }
+    }
+    pub fn get_position(&self) -> usize {
+        self.read_index
+    }
 }
 
 fn extend_to_multiple_of_4(value: usize) -> usize {
     (value + 3) & !3
 }
-
+#[derive(Debug)]
+pub enum EncodeError {
+    ExceedsMaximumLength {
+        requested_length: usize,
+        allowed_length: i32,
+    },
+}
 #[derive(Debug)]
 pub enum DecodeError {
     /// The XDR data ends too early.
