@@ -1,5 +1,6 @@
 use crate::xdr::streams::{DecodeError, ReadStream, WriteStream};
 use super::xdr_codec::XdrCodec;
+#[derive(Debug)]
 pub struct Curve25519Public {
     pub key: [u8; 32],
 }

@@ -1,7 +1,7 @@
 pub mod curve25519public;
-mod xdr_codec;
-mod streams;
-mod auth_cert;
-mod types;
+pub mod auth_cert;
+pub mod xdr_codec;
+pub mod streams;
+pub mod types;
 mod compound_types;
 mod hello;

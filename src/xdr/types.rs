@@ -3,6 +3,25 @@ use crate::xdr::xdr_codec::XdrCodec;
 use super::compound_types::LimitedVarOpaque;
 
 pub type Uint256 = [u8; 32];
+
+#[derive(Copy, Clone)]
+pub enum EnvelopeType {
+    Auth = 3,
+}
+
+impl XdrCodec for EnvelopeType {
+    fn to_xdr_buffered(&self, write_stream: &mut WriteStream) {
+        let value = *self as i32;
+        value.to_xdr_buffered(write_stream);
+    }
+    fn from_xdr_buffered<T: AsRef<[u8]>>(read_stream: &mut ReadStream<T>) -> Result<Self, DecodeError> {
+        let enum_value = i32::from_xdr_buffered(read_stream)?;
+        match enum_value {
+            3 => Ok(EnvelopeType::Auth),
+            _ => Err(DecodeError::InvalidEnumDiscriminator { at_position: read_stream.get_position() }),
+        }
+    }
+}
 pub enum PublicKey {
     PublicKeyTypeEd25519(Uint256),
 }
@@ -10,7 +29,7 @@ impl XdrCodec for PublicKey {
     fn to_xdr_buffered(&self, write_stream: &mut WriteStream) {
         match self {
             PublicKey::PublicKeyTypeEd25519(value) => {
-                (0 as i32).to_xdr_buffered(write_stream);
+                0i32.to_xdr_buffered(write_stream);
                 value.to_xdr_buffered(write_stream)
             },
         }
@@ -26,6 +45,7 @@ impl XdrCodec for PublicKey {
     }
 }
 pub type NodeId = PublicKey;
+
 pub type Signature = LimitedVarOpaque<64>;
 impl<const N: i32> XdrCodec for LimitedVarOpaque<N> {
     /// The XDR encoder implementation for `LimitedVarOpaque`
