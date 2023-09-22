@@ -2,7 +2,7 @@ use crate::xdr::streams::{DecodeError, ReadStream, WriteStream};
 use crate::xdr::types::Signature;
 use crate::xdr::xdr_codec::XdrCodec;
 use super::curve25519public::Curve25519Public;
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct AuthCert {
     pub pubkey: Curve25519Public,
     pub expiration: u64,

@@ -22,7 +22,7 @@ fn main() {
     println!("Data: {:?}", data);
     let keypair = Keypair::from(data);
     let node_config = NodeConfig::default();
-    let authentication = ConnectionAuthentication::new(keypair, node_config.network);
+    let mut authentication = ConnectionAuthentication::new(keypair, node_config.network);
     let validAt = SystemTime::now();
     let since_the_epoch = validAt.duration_since(UNIX_EPOCH)
         .expect("Time went backwards").as_millis();
@@ -36,6 +36,7 @@ fn main() {
     timestamp.to_be_bytes().to_xdr_buffered(&mut ws);
     let xdr_result = ws.get_result();
     let cert = authentication.create_auth_cert_from_milisec(1695381410943u64);
+
     println!("cert {:?}", cert);
 
 }

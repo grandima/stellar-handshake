@@ -17,6 +17,8 @@ pub struct ConnectionAuthentication {
     network_id: Vec<u8>,
     secret_key_ecdh: [u8; ED25519_SECRET_SEED_BYTE_LENGTH],
     public_key_ecdh: [u8; ED25519_PUBLIC_KEY_BYTE_LENGTH],
+    auth_cert: Option<AuthCert>,
+    auth_cert_expiration: u64
 }
 
 impl ConnectionAuthentication {
@@ -33,9 +35,26 @@ impl ConnectionAuthentication {
         ];
         let mut public_key_ecdh: [u8; ED25519_PUBLIC_KEY_BYTE_LENGTH] = [0; ED25519_PUBLIC_KEY_BYTE_LENGTH];
         crypto_scalarmult_base(&mut public_key_ecdh, &secret_key_ecdh);
-        Self {keypair, network_id, public_key_ecdh, secret_key_ecdh }
+        Self {keypair, network_id, public_key_ecdh, secret_key_ecdh, auth_cert: None, auth_cert_expiration: 0 }
     }
-    pub fn create_auth_cert(&self, validAt: SystemTime) -> AuthCert {
+    pub fn get_auth_cert(&mut self, validAt: SystemTime) -> AuthCert {
+        let next_expiration: u64 = <u128 as TryInto<u64>>::try_into(validAt
+            .duration_since(UNIX_EPOCH)
+            .map(|x|x.as_millis())
+            .unwrap()).unwrap() + Self::AUTH_EXPIRATION_LIMIT / 2;
+
+        let cert = match self.auth_cert.take() {
+            Some(cert) => if self.auth_cert_expiration < next_expiration {
+                    self.create_auth_cert(validAt)
+                } else {
+                    cert
+                },
+            None => self.create_auth_cert(validAt)
+        };
+        self.auth_cert = Some(cert.clone());
+        cert
+    }
+    pub fn create_auth_cert(&mut self, validAt: SystemTime) -> AuthCert {
         let timestamp_with_expiration: u64 = validAt
             .duration_since(UNIX_EPOCH)
             .map(|x|x.as_millis())
@@ -45,9 +64,9 @@ impl ConnectionAuthentication {
         self.create_auth_cert_from_milisec(timestamp_with_expiration)
     }
     //TODO: remove pub
-    pub(crate) fn create_auth_cert_from_milisec(&self, milisec: u64) -> AuthCert {
-        let timestamp_with_expiration = milisec + Self::AUTH_EXPIRATION_LIMIT;
-        let bytes_expiration = timestamp_with_expiration.to_be_bytes();
+    pub(crate) fn create_auth_cert_from_milisec(&mut self, milisec: u64) -> AuthCert {
+        self.auth_cert_expiration = milisec + Self::AUTH_EXPIRATION_LIMIT;
+        let bytes_expiration = self.auth_cert_expiration.to_be_bytes();
         let mut writer = WriteStream::new();
         let xdr_envelope_type = EnvelopeType::Auth.to_xdr_buffered(&mut writer);
         let xdr_envelope_type_result = writer.get_result();
@@ -62,9 +81,8 @@ impl ConnectionAuthentication {
         let sig = Signature::new(signed.to_vec()).unwrap();
         AuthCert{
             pubkey: Curve25519Public {key: self.public_key_ecdh},
-            expiration: timestamp_with_expiration,
+            expiration: self.auth_cert_expiration,
             sig
         }
     }
-
 }

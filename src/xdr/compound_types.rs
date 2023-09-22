@@ -1,5 +1,5 @@
 use crate::xdr::streams::EncodeError;
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct LimitedVarOpaque<const N: i32>(pub Vec<u8>);
 
 impl<const N: i32> LimitedVarOpaque<N> {
