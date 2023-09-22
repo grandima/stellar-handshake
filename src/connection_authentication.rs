@@ -44,7 +44,7 @@ impl ConnectionAuthentication {
             .unwrap();
         self.create_auth_cert_from_milisec(timestamp_with_expiration)
     }
-
+    //TODO: remove pub
     pub(crate) fn create_auth_cert_from_milisec(&self, milisec: u64) -> AuthCert {
         let timestamp_with_expiration = milisec + Self::AUTH_EXPIRATION_LIMIT;
         let bytes_expiration = timestamp_with_expiration.to_be_bytes();
