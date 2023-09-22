@@ -4,7 +4,7 @@ use dryoc::sign::{SecretKey, SigningKeyPair};
 pub const ED25519_PUBLIC_KEY_BYTE_LENGTH: usize = 32;
 
 pub const ED25519_SECRET_SEED_BYTE_LENGTH: usize = 32;
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Keypair {
     _secret_seed: Vec<u8>,
     _public_key: Vec<u8>,

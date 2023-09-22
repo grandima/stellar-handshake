@@ -13,7 +13,7 @@ use crate::xdr::xdr_codec::XdrCodec;
 
 #[derive(Debug)]
 pub struct ConnectionAuthentication {
-    keypair: Keypair,
+    pub keypair: Keypair,
     network_id: Vec<u8>,
     secret_key_ecdh: [u8; ED25519_SECRET_SEED_BYTE_LENGTH],
     public_key_ecdh: [u8; ED25519_PUBLIC_KEY_BYTE_LENGTH],

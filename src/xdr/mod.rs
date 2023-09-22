@@ -4,4 +4,4 @@ pub mod xdr_codec;
 pub mod streams;
 pub mod types;
 mod compound_types;
-mod hello;
+pub mod hello;
