@@ -4,6 +4,7 @@ use crate::xdr::streams::{DecodeError, ReadStream, WriteStream};
 use crate::xdr::types::{NodeId, Uint256};
 use crate::xdr::xdr_codec::XdrCodec;
 
+#[derive(Debug)]
 pub struct Hello {
     pub ledger_version: u32,
     pub overlay_version: u32,

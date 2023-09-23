@@ -14,7 +14,7 @@ use crate::xdr::xdr_codec::XdrCodec;
 #[derive(Debug)]
 pub struct ConnectionAuthentication {
     pub keypair: Keypair,
-    network_id: Vec<u8>,
+    pub network_id: [u8; 32],
     secret_key_ecdh: [u8; ED25519_SECRET_SEED_BYTE_LENGTH],
     public_key_ecdh: [u8; ED25519_PUBLIC_KEY_BYTE_LENGTH],
     auth_cert: Option<AuthCert>,
@@ -26,7 +26,9 @@ impl ConnectionAuthentication {
     pub fn new(keypair: Keypair, network_id: impl AsRef<[u8]>) -> Self {
         let mut hasher = Sha256::new();
         hasher.update(network_id);
-        let network_id = hasher.finalize().to_vec();
+        let hashed_network_id = hasher.finalize().to_vec();
+        let mut network_id = [0; 32];
+        network_id.copy_from_slice(&hashed_network_id);
         //TODO: replace
         // let secret_key_ecdh: [u8; ED25519_SECRET_SEED_BYTE_LENGTH] = randombytes_buf(ED25519_SECRET_SEED_BYTE_LENGTH).into();
         let secret_key_ecdh: [u8; ED25519_SECRET_SEED_BYTE_LENGTH] = [
@@ -70,7 +72,7 @@ impl ConnectionAuthentication {
         let mut writer = WriteStream::new();
         let xdr_envelope_type = EnvelopeType::Auth.to_xdr_buffered(&mut writer);
         let xdr_envelope_type_result = writer.get_result();
-        let mut signature_data = self.network_id.clone();
+        let mut signature_data = self.network_id.clone().to_vec();
         signature_data.extend(xdr_envelope_type_result.iter());
         signature_data.extend(bytes_expiration.iter());
         signature_data.extend(self.public_key_ecdh.iter());
