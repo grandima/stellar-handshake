@@ -6,9 +6,7 @@ mod xdr;
 mod connection;
 
 use std::io::Write;
-use std::net::TcpStream;
-use std::time::{SystemTime, UNIX_EPOCH};
-use data_encoding::BASE32;
+
 use rand::{random, Rng, thread_rng};
 use keypair::Keypair;
 use node_config::NodeConfig;
@@ -20,8 +18,14 @@ use crate::xdr::hello::Hello;
 use crate::xdr::streams::WriteStream;
 use crate::xdr::types::{AuthenticatedMessage, AuthenticatedMessageV0, NodeId, StellarMessage};
 use crate::xdr::xdr_codec::XdrCodec;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::net::{TcpListener, TcpStream};
+use std::error::Error;
+use std::time::SystemTime;
+use data_encoding::BASE32;
 
-fn main() {
+#[tokio::main(flavor = "multi_thread", worker_threads = 2)]
+async fn main() -> Result<(), Box<dyn Error>> {
     let key = "SCL4SDOGTLHEJ6OMDIMYXRC4JA75P2SY3F2X7ZJ2TMNCXT3FSJVGS2BO";
     let decoded = BASE32.decode(key.as_bytes()).expect("Failed to decode");
     let version_byte = decoded[0];
@@ -61,7 +65,8 @@ fn main() {
     let message_buff = UnlimitedVarOpaque::new(result).unwrap();
     let mut  writer = WriteStream::new();
     message_buff.to_xdr_buffered(&mut writer);
-    let mut tcp_stream = TcpStream::connect("127.0.0.1:11601").unwrap();
-    tcp_stream.write(&writer.get_result());
+    let mut tcp_stream = tokio::net::TcpStream::connect("127.0.0.1:11601").await.unwrap();
+    tcp_stream.write(&writer.get_result()).await.unwrap();
+    Ok(())
 
 }

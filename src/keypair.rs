@@ -9,11 +9,7 @@ pub struct Keypair {
     _secret_key: [u8; ED25519_SECRET_KEY_BYTE_LENGTH]
 }
 
-impl Default for Keypair {
-    fn default() -> Self {
-        Self::from()
-    }
-}
+
 impl From<[u8; ED25519_SECRET_SEED_BYTE_LENGTH]> for Keypair {
     fn from(_secret_seed: [u8; ED25519_SECRET_SEED_BYTE_LENGTH]) -> Self {
         let mut _public_key = SigningKeyPair::<[u8; ED25519_PUBLIC_KEY_BYTE_LENGTH], SecretKey>::from_seed(&_secret_seed.clone()).public_key;
