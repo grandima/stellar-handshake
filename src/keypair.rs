@@ -1,10 +1,7 @@
 use dryoc::classic::crypto_sign::crypto_sign_detached;
 use dryoc::sign::{SecretKey, SigningKeyPair};
+use crate::xdr::constants::{ED25519_PUBLIC_KEY_BYTE_LENGTH, ED25519_SECRET_KEY_BYTE_LENGTH, ED25519_SECRET_SEED_BYTE_LENGTH};
 
-pub const ED25519_PUBLIC_KEY_BYTE_LENGTH: usize = 32;
-
-pub const ED25519_SECRET_SEED_BYTE_LENGTH: usize = 32;
-pub const ED25519_SECRET_KEY_BYTE_LENGTH: usize = ED25519_PUBLIC_KEY_BYTE_LENGTH + ED25519_SECRET_SEED_BYTE_LENGTH;
 
 #[derive(Debug, Clone)]
 pub struct Keypair {
@@ -24,9 +21,9 @@ impl From<[u8; ED25519_SECRET_SEED_BYTE_LENGTH]> for Keypair {
 }
 
 impl Keypair {
-    pub fn sign(&self, message: impl AsRef<[u8]>) -> [u8; 64] {
-        let mut signature = [0u8; 64];
-        let arr: [u8; 64] = self._secret_key.clone().try_into().unwrap();
+    pub fn sign(&self, message: impl AsRef<[u8]>) -> [u8; ED25519_SECRET_KEY_BYTE_LENGTH] {
+        let mut signature = [0u8; ED25519_SECRET_KEY_BYTE_LENGTH];
+        let arr: [u8; ED25519_SECRET_KEY_BYTE_LENGTH] = self._secret_key.clone();
         crypto_sign_detached(&mut signature, message.as_ref(), &arr).expect("Error");
         signature
     }

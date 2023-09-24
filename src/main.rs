@@ -14,8 +14,8 @@ use keypair::Keypair;
 use node_config::NodeConfig;
 use connection_authentication::*;
 use crate::connection::Connection;
-use crate::keypair::ED25519_SECRET_SEED_BYTE_LENGTH;
-use crate::xdr::compound_types::LimitedVarOpaque;
+use crate::xdr::constants::ED25519_SECRET_SEED_BYTE_LENGTH;
+use crate::xdr::compound_types::{LimitedVarOpaque, UnlimitedVarOpaque};
 use crate::xdr::hello::Hello;
 use crate::xdr::streams::WriteStream;
 use crate::xdr::types::{AuthenticatedMessage, AuthenticatedMessageV0, NodeId, StellarMessage};
@@ -38,7 +38,7 @@ fn main() {
     // println!("keypair {:?}", keypair);
     let cert = authentication.get_auth_cert(SystemTime::now());
 
-    let version_str: LimitedVarOpaque<100> = LimitedVarOpaque::new("v19.13.0".as_bytes().to_vec()).unwrap();
+    let version_str = LimitedVarOpaque::<100>::new("v19.13.0".as_bytes().to_vec()).unwrap();
     let nonce = Connection{}.local_nonce();
     let mut  writer = WriteStream::new();
     let hello = Hello{ledger_version: 17, overlay_version: 29, overlay_min_version: 17, network_id: authentication.network_id, version_str, listening_port: 11602, peer_id: NodeId::PublicKeyTypeEd25519(keypair.public_key().clone()), cert, nonce };
@@ -48,10 +48,9 @@ fn main() {
     let result = writer.get_result();
     println!("authenticated_hello_arr {:?}", result);
     println!("authenticated_hello len {:?}", result.len());
+    let message_buff = UnlimitedVarOpaque::new(result).unwrap();
     let mut  writer = WriteStream::new();
-    writer.write_next_u32(result.len() as u32);
-    let mut message_buff = writer.get_result();
-    message_buff.extend(result.iter());
+    message_buff.to_xdr_buffered(&mut writer);
     let mut tcp_stream = TcpStream::connect("127.0.0.1:11601").unwrap();
-    tcp_stream.write(&message_buff);
+    tcp_stream.write(&writer.get_result());
 }

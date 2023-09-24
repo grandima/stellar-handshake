@@ -1,7 +1,7 @@
+use crate::xdr::compound_types::LimitedVarOpaque;
 use crate::xdr::hello::Hello;
 use crate::xdr::streams::{DecodeError, ReadStream, WriteStream};
 use crate::xdr::xdr_codec::XdrCodec;
-use super::compound_types::LimitedVarOpaque;
 
 pub type Uint256 = [u8; 32];
 #[derive(Debug,)]
@@ -34,7 +34,7 @@ pub struct AuthenticatedMessageV0 {
 
 impl AuthenticatedMessageV0 {
     pub fn new(message: StellarMessage) -> Self {
-        Self {sequence: 0, message, mac: HmacSha256Mac{mac: [0; 32]}}
+        Self {sequence: 0, message, mac: HmacSha256Mac::default()}
     }
 }
 
@@ -96,6 +96,11 @@ impl XdrCodec for MessageType {
 pub struct HmacSha256Mac {
     pub mac: [u8; 32],
 }
+impl Default for HmacSha256Mac {
+    fn default() -> Self {
+        Self {mac: [0; 32]}
+    }
+}
 impl XdrCodec for HmacSha256Mac {
     fn to_xdr_buffered(&self, write_stream: &mut WriteStream) {
         self.mac.to_xdr_buffered(write_stream);
@@ -150,24 +155,4 @@ impl XdrCodec for PublicKey {
 pub type NodeId = PublicKey;
 
 pub type Signature = LimitedVarOpaque<64>;
-impl<const N: i32> XdrCodec for LimitedVarOpaque<N> {
-    /// The XDR encoder implementation for `LimitedVarOpaque`
-    fn to_xdr_buffered(&self, write_stream: &mut WriteStream) {
-        write_stream.write_next_u32(self.0.len() as u32);
-        write_stream.write_next_binary_data(&self.0[..]);
-    }
-
-    /// The XDR decoder implementation for `LimitedVarOpaque`
-    fn from_xdr_buffered<R: AsRef<[u8]>>(read_stream: &mut ReadStream<R>) -> Result<Self, DecodeError> {
-        let length = read_stream.read_next_u32()? as i32;
-        match length > N {
-            true => Err(DecodeError::VarOpaqueExceedsMaxLength {
-                at_position: read_stream.get_position(),
-                max_length: N,
-                actual_length: length,
-            }),
-            false => Ok(LimitedVarOpaque::new(read_stream.read_next_binary_data(length as usize)?).unwrap()),
-        }
-    }
-}
 

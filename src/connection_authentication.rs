@@ -6,6 +6,9 @@ use dryoc::classic::crypto_core::crypto_scalarmult_base;
 use crate::xdr::auth_cert;
 use crate::xdr::auth_cert::AuthCert;
 use std::time::{SystemTime, UNIX_EPOCH};
+use dryoc::rng::{copy_randombytes, randombytes_buf};
+use rand::random;
+use crate::xdr::constants::{ED25519_PUBLIC_KEY_BYTE_LENGTH, ED25519_SECRET_SEED_BYTE_LENGTH};
 use crate::xdr::curve25519public::Curve25519Public;
 use crate::xdr::streams::WriteStream;
 use crate::xdr::types::{EnvelopeType, Signature};
@@ -21,29 +24,30 @@ pub struct ConnectionAuthentication {
     auth_cert_expiration: u64
 }
 
+
+
 impl ConnectionAuthentication {
     pub const  AUTH_EXPIRATION_LIMIT: u64 = 360000; //60 minutes
     pub fn new(keypair: Keypair, network_id: impl AsRef<[u8]>) -> Self {
         let mut hasher = Sha256::new();
         hasher.update(network_id);
-        let hashed_network_id = hasher.finalize().to_vec();
-        let mut network_id = [0; 32];
-        network_id.copy_from_slice(&hashed_network_id);
-        //TODO: replace
-        // let secret_key_ecdh: [u8; ED25519_SECRET_SEED_BYTE_LENGTH] = randombytes_buf(ED25519_SECRET_SEED_BYTE_LENGTH).into();
-        let secret_key_ecdh: [u8; ED25519_SECRET_SEED_BYTE_LENGTH] = [
-            36, 15, 196, 238, 139, 200, 81, 214, 184, 101, 133, 6, 129, 121, 28, 202,
-            234, 82, 26, 236, 242, 245, 46, 154, 170, 235, 109, 181, 228, 73, 129, 108
-        ];
-        let mut public_key_ecdh: [u8; ED25519_PUBLIC_KEY_BYTE_LENGTH] = [0; ED25519_PUBLIC_KEY_BYTE_LENGTH];
+        let network_id = hasher.finalize().into();
+        let mut secret_key_ecdh = [0u8; ED25519_SECRET_SEED_BYTE_LENGTH];
+        copy_randombytes(&mut secret_key_ecdh);
+        let mut public_key_ecdh = [0u8; ED25519_PUBLIC_KEY_BYTE_LENGTH];
         crypto_scalarmult_base(&mut public_key_ecdh, &secret_key_ecdh);
         Self {keypair, network_id, public_key_ecdh, secret_key_ecdh, auth_cert: None, auth_cert_expiration: 0 }
     }
     pub fn get_auth_cert(&mut self, validAt: SystemTime) -> AuthCert {
-        let next_expiration: u64 = <u128 as TryInto<u64>>::try_into(validAt
+        let duration_since_epoch = validAt
             .duration_since(UNIX_EPOCH)
-            .map(|x|x.as_millis())
-            .unwrap()).unwrap() + Self::AUTH_EXPIRATION_LIMIT / 2;
+            .expect("Time went backwards");
+
+        let millis_since_epoch = duration_since_epoch.as_millis();
+        let millis_as_u64: u64 = millis_since_epoch.try_into().unwrap_or_else(|e| {
+            panic!("Failed to convert millis_since_epoch to u64: {}", e);
+        });
+        let next_expiration = millis_as_u64 + Self::AUTH_EXPIRATION_LIMIT / 2;
 
         let cert = match self.auth_cert.take() {
             Some(cert) => if self.auth_cert_expiration < next_expiration {
@@ -56,7 +60,7 @@ impl ConnectionAuthentication {
         self.auth_cert = Some(cert.clone());
         cert
     }
-    pub fn create_auth_cert(&mut self, validAt: SystemTime) -> AuthCert {
+    fn create_auth_cert(&mut self, validAt: SystemTime) -> AuthCert {
         let timestamp_with_expiration: u64 = validAt
             .duration_since(UNIX_EPOCH)
             .map(|x|x.as_millis())
@@ -65,8 +69,8 @@ impl ConnectionAuthentication {
             .unwrap();
         self.create_auth_cert_from_milisec(timestamp_with_expiration)
     }
-    //TODO: remove pub
-    pub(crate) fn create_auth_cert_from_milisec(&mut self, milisec: u64) -> AuthCert {
+
+     fn create_auth_cert_from_milisec(&mut self, milisec: u64) -> AuthCert {
         self.auth_cert_expiration = milisec + Self::AUTH_EXPIRATION_LIMIT;
         let bytes_expiration = self.auth_cert_expiration.to_be_bytes();
         let mut writer = WriteStream::new();
