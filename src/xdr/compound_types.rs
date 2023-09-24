@@ -21,6 +21,13 @@ impl<const N: i32> LimitedVarOpaque<N> {
     }
 }
 
+impl <const N: i32> TryFrom<&str> for LimitedVarOpaque<N> {
+    type Error = EncodeError;
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        LimitedVarOpaque::new(value.as_bytes().into())
+    }
+}
+
 impl<const N: i32> XdrCodec for LimitedVarOpaque<N> {
     /// The XDR encoder implementation for `LimitedVarOpaque`
     fn to_xdr_buffered(&self, write_stream: &mut WriteStream) {

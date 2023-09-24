@@ -39,9 +39,19 @@ fn main() {
     let cert = authentication.get_auth_cert(SystemTime::now());
 
     let version_str = LimitedVarOpaque::<100>::new("v19.13.0".as_bytes().to_vec()).unwrap();
-    let nonce = Connection{}.local_nonce();
+    let nonce = Connection::new().local_nonce();
     let mut  writer = WriteStream::new();
-    let hello = Hello{ledger_version: 17, overlay_version: 29, overlay_min_version: 17, network_id: authentication.network_id, version_str, listening_port: 11602, peer_id: NodeId::PublicKeyTypeEd25519(keypair.public_key().clone()), cert, nonce };
+    let hello = Hello{
+        ledger_version: node_config.node_info.ledger_version,
+        overlay_version: node_config.node_info.overlay_version,
+        overlay_min_version: node_config.node_info.overlay_min_version,
+        network_id: authentication.network_id,
+        version_str: node_config.node_info.version_string,
+        listening_port: node_config.listening_port,
+        peer_id: NodeId::PublicKeyTypeEd25519(keypair.public_key().clone()),
+        cert,
+        nonce
+    };
     let authenticated_hello = AuthenticatedMessage::V0(AuthenticatedMessageV0::new(StellarMessage::Hello(hello)));
     // println!("authenticated hello {:?}", authenticated_hello);
     authenticated_hello.to_xdr_buffered(&mut writer);
@@ -53,4 +63,5 @@ fn main() {
     message_buff.to_xdr_buffered(&mut writer);
     let mut tcp_stream = TcpStream::connect("127.0.0.1:11601").unwrap();
     tcp_stream.write(&writer.get_result());
+
 }
