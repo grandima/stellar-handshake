@@ -70,7 +70,6 @@ impl XdrCodec for StellarMessage {
     fn from_xdr_buffered<T: AsRef<[u8]>>(read_stream: &mut ReadStream<T>) -> Result<Self, DecodeError> {
         match MessageType::from_xdr_buffered(read_stream)? {
             MessageType::Hello => Ok(StellarMessage::Hello(Hello::from_xdr_buffered(read_stream)?)),
-
         }
     }
 }

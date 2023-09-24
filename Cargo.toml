@@ -11,3 +11,4 @@ data-encoding = "2.3"
 dryoc = "0.5.1"
 sha2 = {version = "0.10.7", features = ["std"]}
 byteorder = "1.4.3"
+rand = "0.8.5"

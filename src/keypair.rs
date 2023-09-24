@@ -13,7 +13,7 @@ pub struct Keypair {
     _secret_key: [u8; ED25519_SECRET_KEY_BYTE_LENGTH]
 }
 
-impl From<[u8; 32]> for Keypair {
+impl From<[u8; ED25519_SECRET_SEED_BYTE_LENGTH]> for Keypair {
     fn from(_secret_seed: [u8; ED25519_SECRET_SEED_BYTE_LENGTH]) -> Self {
         let mut _public_key = SigningKeyPair::<[u8; ED25519_PUBLIC_KEY_BYTE_LENGTH], SecretKey>::from_seed(&_secret_seed.clone()).public_key;
         let mut _secret_key = [0u8; ED25519_SECRET_KEY_BYTE_LENGTH];
@@ -25,7 +25,7 @@ impl From<[u8; 32]> for Keypair {
 
 impl Keypair {
     pub fn sign(&self, message: impl AsRef<[u8]>) -> [u8; 64] {
-        let mut signature:[u8; 64] = [0; 64];
+        let mut signature = [0u8; 64];
         let arr: [u8; 64] = self._secret_key.clone().try_into().unwrap();
         crypto_sign_detached(&mut signature, message.as_ref(), &arr).expect("Error");
         signature
