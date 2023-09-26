@@ -6,7 +6,10 @@ pub struct Connection {
 }
 impl Connection {
     pub fn new() -> Self {
-        let nonce = random::<u32>().to_be_bytes();
+        // let nonce = random::<u32>().to_be_bytes();
+        let nonce = [
+            48, 46, 53, 55, 55, 49, 53, 55, 48, 53, 51, 48, 53, 51, 55, 48, 50, 54, 48, 55, 50, 56
+        ];
         let mut hasher = Sha256::new();
         hasher.update(nonce);
         let mut local_nonce = [0u8; 32];

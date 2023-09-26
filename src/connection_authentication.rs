@@ -16,7 +16,7 @@ use crate::xdr::xdr_codec::XdrCodec;
 
 #[derive(Debug)]
 pub struct ConnectionAuthentication {
-    pub keypair: Keypair,
+    keypair: Keypair,
     pub network_id: [u8; 32],
     secret_key_ecdh: [u8; ED25519_SECRET_SEED_BYTE_LENGTH],
     public_key_ecdh: [u8; ED25519_PUBLIC_KEY_BYTE_LENGTH],
@@ -27,13 +27,17 @@ pub struct ConnectionAuthentication {
 
 
 impl ConnectionAuthentication {
-    pub const  AUTH_EXPIRATION_LIMIT: u64 = 360000; //60 minutes
+    const  AUTH_EXPIRATION_LIMIT: u64 = 360000; //60 minutes
     pub fn new(keypair: Keypair, network_id: impl AsRef<[u8]>) -> Self {
         let mut hasher = Sha256::new();
         hasher.update(network_id);
         let network_id = hasher.finalize().into();
-        let mut secret_key_ecdh = [0u8; ED25519_SECRET_SEED_BYTE_LENGTH];
-        copy_randombytes(&mut secret_key_ecdh);
+        // let mut secret_key_ecdh = [0u8; ED25519_SECRET_SEED_BYTE_LENGTH];
+        // copy_randombytes(&mut secret_key_ecdh);
+        let mut secret_key_ecdh = [
+            36, 15, 196, 238, 139, 200, 81, 214, 184, 101, 133, 6, 129, 121, 28, 202,
+            234, 82, 26, 236, 242, 245, 46, 154, 170, 235, 109, 181, 228, 73, 129, 108
+        ];
         let mut public_key_ecdh = [0u8; ED25519_PUBLIC_KEY_BYTE_LENGTH];
         crypto_scalarmult_base(&mut public_key_ecdh, &secret_key_ecdh);
         Self {keypair, network_id, public_key_ecdh, secret_key_ecdh, auth_cert: None, auth_cert_expiration: 0 }
@@ -71,7 +75,8 @@ impl ConnectionAuthentication {
     }
 
      fn create_auth_cert_from_milisec(&mut self, milisec: u64) -> AuthCert {
-        self.auth_cert_expiration = milisec + Self::AUTH_EXPIRATION_LIMIT;
+         self.auth_cert_expiration = milisec + Self::AUTH_EXPIRATION_LIMIT;
+        // self.auth_cert_expiration = 1695728543325 + Self::AUTH_EXPIRATION_LIMIT;
         let bytes_expiration = self.auth_cert_expiration.to_be_bytes();
         let mut writer = WriteStream::new();
         let xdr_envelope_type = EnvelopeType::Auth.to_xdr_buffered(&mut writer);
@@ -90,5 +95,8 @@ impl ConnectionAuthentication {
             expiration: self.auth_cert_expiration,
             sig
         }
+    }
+    pub fn keypair(&self) -> &Keypair {
+        &self.keypair
     }
 }

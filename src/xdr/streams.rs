@@ -33,6 +33,10 @@ pub struct ReadStream<T: AsRef<[u8]>> {
 }
 
 impl<T: AsRef<[u8]>> ReadStream<T> {
+    pub fn new(source: T) -> ReadStream<T> {
+        ReadStream { read_index: 0, source }
+    }
+
     fn generate_sudden_end_error(&self, no_of_bytes_to_read: usize) -> DecodeError {
         DecodeError::SuddenEnd {
             actual_length: self.source.as_ref().len(),
@@ -78,6 +82,14 @@ impl<T: AsRef<[u8]>> ReadStream<T> {
     }
     pub fn get_position(&self) -> usize {
         self.read_index
+    }
+
+    pub fn no_of_bytes_left_to_read(&self) -> isize {
+        self.source.as_ref().len() as isize - self.read_index as isize
+    }
+    //TODO: remove this code
+    pub fn get_source(&self) -> &T {
+        &self.source
     }
 }
 

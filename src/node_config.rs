@@ -4,7 +4,7 @@ use crate::xdr::compound_types::LimitedVarOpaque;
 pub struct NodeConfig {
     pub network: String,
     pub node_info: NodeInfo,
-    pub listening_port: i32,
+    pub listening_port: u32,
     private_key: Option<String>,
     receive_transaction_messages: bool,
     receive_scp_messages: bool,
