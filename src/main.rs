@@ -4,6 +4,9 @@ mod node_config;
 mod connection_authentication;
 mod xdr;
 mod connection;
+mod remote_node_info;
+mod public_key;
+mod utils;
 
 use std::io::Write;
 use rand::{random, Rng, thread_rng};
@@ -37,19 +40,17 @@ async fn main() -> Result<(), Box<dyn Error>> {
     seed.copy_from_slice(data);
     let keypair = Keypair::from(seed);
     let node_config = NodeConfig::default();
-    let mut authentication = ConnectionAuthentication::new(keypair, node_config.network);
-    let cert = authentication.get_auth_cert(SystemTime::now());
-
+    let mut connection = Connection::new(ConnectionAuthentication::new(keypair, node_config.network));
     let hello = Hello{
         ledger_version: node_config.node_info.ledger_version,
         overlay_version: node_config.node_info.overlay_version,
         overlay_min_version: node_config.node_info.overlay_min_version,
-        network_id: authentication.network_id,
+        network_id: connection.authentication.network_id,
         version_str: node_config.node_info.version_string,
         listening_port: node_config.listening_port,
-        peer_id: NodeId::PublicKeyTypeEd25519(authentication.keypair().public_key().clone()),
-        cert,
-        nonce: Connection::new().local_nonce()
+        peer_id: NodeId::PublicKeyTypeEd25519(connection.authentication.keypair().public_key().clone()),
+        cert: connection.authentication.get_auth_cert(SystemTime::now()).clone(),
+        nonce: connection.local_nonce
     };
     let authenticated_message = AuthenticatedMessageV0::new(StellarMessage::Hello(hello));
     let versionized_message = AuthenticatedMessage::V0(authenticated_message);
@@ -61,7 +62,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let mut stream = tokio::net::TcpStream::connect("127.0.0.1:11601").await.unwrap();
     let result = stream.write(&writer.get_result()).await.unwrap();
     let mut buffer: Vec<u8> = Vec::with_capacity(400);
-    thread::sleep(Duration::from_secs(1));
     loop {
         let read_size = stream.read_buf(&mut buffer).await.unwrap_or_else(|error| {
             println!("Read error: {:?}", error);
@@ -75,7 +75,15 @@ async fn main() -> Result<(), Box<dyn Error>> {
         println!("read buff start: {:?}", read_stream.get_source());
         // let mut length_buff = read_stream.read_next_binary_data(4).unwrap();
         // let mut length = u32::from_be_bytes([buffer[0] & 0x7f, buffer[1], buffer[2], buffer[3]]);
-        let message = ArchivedMessage::<AuthenticatedMessage>::from_xdr_buffered(&mut read_stream).unwrap();
+        let message = ArchivedMessage::<AuthenticatedMessage>::from_xdr_buffered(&mut read_stream).unwrap().message;
+        let message = match match message {
+            AuthenticatedMessage::V0(message) => message
+        }.message {
+            StellarMessage::Hello(hello) => {hello}
+            StellarMessage::Auth(_) => {panic!()}
+        };
+        // connection.remoteNonce = Some(message.nonce.clone());
+
         println!("{:?}", message);
         // let Some(mut message) = message.take() else {
         //     continue

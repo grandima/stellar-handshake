@@ -5,7 +5,7 @@ use crate::xdr::types::{NodeId, Uint256};
 use crate::xdr::xdr_codec::XdrCodec;
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Auth {
-    pub flags: i32,
+    pub flags: u32,
 }
 
 impl XdrCodec for Auth {
@@ -14,7 +14,7 @@ impl XdrCodec for Auth {
     }
 
     fn from_xdr_buffered<T: AsRef<[u8]>>(read_stream: &mut ReadStream<T>) -> Result<Self, DecodeError> {
-        Ok(Auth { flags: i32::from_xdr_buffered(read_stream)? })
+        Ok(Auth { flags: u32::from_xdr_buffered(read_stream)? })
     }
 }
 

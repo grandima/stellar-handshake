@@ -7,7 +7,7 @@ use crate::xdr::xdr_codec::XdrCodec;
 pub type Uint256 = [u8; 32];
 #[derive(Debug)]
 pub struct ArchivedMessage<T: XdrCodec> {
-    message: T
+    pub message: T
 }
 
 impl<T: XdrCodec> ArchivedMessage<T> {

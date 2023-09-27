@@ -4,6 +4,7 @@ use crate::xdr::constants::{ED25519_PUBLIC_KEY_BYTE_LENGTH, ED25519_SECRET_KEY_B
 
 #[derive(Debug, Clone)]
 pub struct Keypair {
+    //TODO do I need underscore variables?
     _secret_seed: [u8; ED25519_SECRET_SEED_BYTE_LENGTH],
     _public_key: [u8; ED25519_PUBLIC_KEY_BYTE_LENGTH],
     _secret_key: [u8; ED25519_SECRET_KEY_BYTE_LENGTH]
@@ -24,7 +25,7 @@ impl Keypair {
     pub fn sign(&self, message: impl AsRef<[u8]>) -> [u8; ED25519_SECRET_KEY_BYTE_LENGTH] {
         let mut signature = [0u8; ED25519_SECRET_KEY_BYTE_LENGTH];
         let arr: [u8; ED25519_SECRET_KEY_BYTE_LENGTH] = self._secret_key.clone();
-        crypto_sign_detached(&mut signature, message.as_ref(), &arr).expect("Error");
+        crypto_sign_detached(&mut signature, message.as_ref(), &arr).unwrap();
         signature
     }
 
