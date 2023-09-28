@@ -63,16 +63,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let result = stream.write(&writer.get_result()).await.unwrap();
     let mut buffer: Vec<u8> = Vec::with_capacity(400);
     loop {
-        let read_size = stream.read_buf(&mut buffer).await.unwrap_or_else(|error| {
-            println!("Read error: {:?}", error);
-            0
-        });
-        println!("read size: {:?}", read_size);
+        let read_size = stream.read_buf(&mut buffer).await.unwrap();
         if read_size == 0 {
             return Ok(());
         }
         let mut read_stream = ReadStream::new(buffer.clone());
-        println!("read buff start: {:?}", read_stream.get_source());
         // let mut length_buff = read_stream.read_next_binary_data(4).unwrap();
         // let mut length = u32::from_be_bytes([buffer[0] & 0x7f, buffer[1], buffer[2], buffer[3]]);
         let message = ArchivedMessage::<AuthenticatedMessage>::from_xdr_buffered(&mut read_stream).unwrap().message;
@@ -84,11 +79,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
             }
             StellarMessage::Auth(_) => {panic!()}
         };
-        connection.process(message);
+        connection.process_hello(message);
         let auth_message = connection.auth_message();
         let mut  writer = WriteStream::new();
         auth_message.to_xdr_buffered(&mut writer);
-        let result = stream.write(&writer.get_result()).await.unwrap();
+        let result = writer.get_result();
+        let result = stream.write(&result).await.unwrap();
         break;
     }
     Ok(())

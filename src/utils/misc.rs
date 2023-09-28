@@ -1,5 +1,5 @@
 use rand::random;
-use crate::utils::sha2::create_sha256;
+use crate::utils::sha2::{create_sha256, create_sha256_hmac};
 
 pub fn increase_buffer_by_one(buf: &mut [u8]) {
     let mut i = buf.len();

@@ -3,7 +3,7 @@ use rand::random;
 use crate::connection_authentication::{ConnectionAuthentication, MacKeyType};
 use crate::remote_node_info::RemoteNodeInfo;
 use crate::utils::misc::{generate_nonce, increase_buffer_by_one};
-use crate::utils::sha2::{create_sha256, create_sha256_hmac};
+use crate::utils::sha2::{create_sha256_hmac};
 use crate::xdr::constants::SHA256_LENGTH;
 use crate::xdr::stellar_messages::{Auth, Hello};
 use crate::xdr::streams::WriteStream;
@@ -50,14 +50,16 @@ impl Connection {
             let mut data =  self.local_sequence.to_vec();
             data.extend_from_slice(&writer.get_result());
             let mut mac = [0u8; SHA256_LENGTH];
-            mac.copy_from_slice(&create_sha256_hmac(&data, sending_mac_key));
+            let sha_result = create_sha256_hmac(&data, sending_mac_key);
+            mac.copy_from_slice(&sha_result);
             HmacSha256Mac{mac}
+
         } else {
             HmacSha256Mac { mac: [0u8; SHA256_LENGTH] }
         }
     }
 
-    pub fn process(&mut self, hello: Hello) {
+    pub fn process_hello(&mut self, hello: Hello) {
         let node_info = RemoteNodeInfo::from(hello);
         self.sending_mac_key = Some(self.authentication.mac_key(
             MacKeyType::Sending,

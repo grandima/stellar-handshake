@@ -37,13 +37,8 @@ impl ConnectionAuthentication {
     pub fn new(keypair: Keypair, network_id: impl AsRef<[u8]>) -> Self {
         let mut hashed_network_id = [0u8; 32];
         hashed_network_id.copy_from_slice(&create_sha256(network_id.as_ref()));
-        // let mut secret_key_ecdh = [0u8; ED25519_SECRET_SEED_BYTE_LENGTH];
-        // copy_randombytes(&mut secret_key_ecdh);
-        //TODO remove it
-        let mut secret_key_ecdh = [
-            36, 15, 196, 238, 139, 200, 81, 214, 184, 101, 133, 6, 129, 121, 28, 202,
-            234, 82, 26, 236, 242, 245, 46, 154, 170, 235, 109, 181, 228, 73, 129, 108
-        ];
+        let mut secret_key_ecdh = [0u8; ED25519_SECRET_SEED_BYTE_LENGTH];
+        copy_randombytes(&mut secret_key_ecdh);
         let mut public_key_ecdh = [0u8; ED25519_PUBLIC_KEY_BYTE_LENGTH];
         crypto_scalarmult_base(&mut public_key_ecdh, &secret_key_ecdh);
         Self {
@@ -74,7 +69,7 @@ impl ConnectionAuthentication {
                 buff.push(1);
                 buff.extend_from_slice(remote_nonce.as_ref());
                 buff.extend_from_slice(local_nonce.as_ref());
-                buff.push(0);
+                buff.push(1);
             }
         };
         let shared_key = self.shared_key(remote_public_key_ecdh);
@@ -91,7 +86,7 @@ impl ConnectionAuthentication {
         result_buf.extend_from_slice(&self.public_key_ecdh);
         result_buf.extend_from_slice(remote_public_key_ecdh.as_ref());
         let zero_salt = [0u8; SHA256_LENGTH];
-        result_buf = create_sha256_hmac(&buf, &zero_salt);
+        result_buf = create_sha256_hmac(&result_buf, &zero_salt);
         self.called_remote_keys.insert(remote_public_key_ecdh.clone(), result_buf.clone());
         result_buf
     }

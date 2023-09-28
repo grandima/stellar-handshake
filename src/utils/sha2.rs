@@ -13,3 +13,4 @@ pub fn create_sha256(data: &[u8]) -> Vec<u8> {
     let digest = context.finish();
     digest.as_ref().to_vec()
 }
+
