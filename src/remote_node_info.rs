@@ -1,9 +1,10 @@
 use base64::Engine;
-use crate::connection::generate_nonce;
+
 use crate::node_config::NodeInfo;
 use crate::xdr::stellar_messages::Hello;
 use crate::xdr::types::Uint256;
 
+#[derive(Clone)]
 pub struct RemoteNodeInfo {
     pub remote_nonce: Uint256,
     pub remote_public_key_ecdh: Uint256,

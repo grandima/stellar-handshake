@@ -30,7 +30,7 @@ impl Default for NodeConfig {
         }
     }
 }
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct NodeInfo {
     pub ledger_version: u32,
     pub overlay_version: u32,

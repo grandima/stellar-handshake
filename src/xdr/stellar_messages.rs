@@ -18,7 +18,7 @@ impl XdrCodec for Auth {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Hello {
     pub ledger_version: u32,
     pub overlay_version: u32,

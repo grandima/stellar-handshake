@@ -5,6 +5,7 @@ use crate::xdr::streams::{DecodeError, ReadStream, WriteStream};
 use crate::xdr::xdr_codec::XdrCodec;
 
 pub type Uint256 = [u8; 32];
+pub type Uint64 = [u8; 8];
 #[derive(Debug)]
 pub struct ArchivedMessage<T: XdrCodec> {
     pub message: T
@@ -66,15 +67,9 @@ impl AuthenticatedMessage where Self: XdrCodec {
 }
 #[derive(Debug)]
 pub struct AuthenticatedMessageV0 {
-    pub sequence: u64,
+    pub sequence: Uint64,
     pub message: StellarMessage,
     pub mac: HmacSha256Mac,
-}
-
-impl AuthenticatedMessageV0 {
-    pub fn new(message: StellarMessage) -> Self {
-        Self {sequence: 0, message, mac: HmacSha256Mac::default()}
-    }
 }
 
 impl XdrCodec for AuthenticatedMessageV0 {
@@ -86,13 +81,13 @@ impl XdrCodec for AuthenticatedMessageV0 {
 
     fn from_xdr_buffered<T: AsRef<[u8]>>(read_stream: &mut ReadStream<T>) -> Result<Self, DecodeError> {
         Ok(AuthenticatedMessageV0 {
-            sequence: u64::from_xdr_buffered(read_stream)?,
+            sequence: <Uint64>::from_xdr_buffered(read_stream)?,
             message: StellarMessage::from_xdr_buffered(read_stream)?,
             mac: HmacSha256Mac::from_xdr_buffered(read_stream)?,
         })
     }
 }
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum StellarMessage {
     Hello(Hello),
     Auth(Auth),
@@ -196,7 +191,7 @@ impl XdrCodec for PublicKeyType {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum PublicKey {
     PublicKeyTypeEd25519(Uint256),
 }
