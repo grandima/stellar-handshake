@@ -68,8 +68,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
             return Ok(());
         }
         let mut read_stream = ReadStream::new(buffer.clone());
-        // let mut length_buff = read_stream.read_next_binary_data(4).unwrap();
-        // let mut length = u32::from_be_bytes([buffer[0] & 0x7f, buffer[1], buffer[2], buffer[3]]);
         let message = ArchivedMessage::<AuthenticatedMessage>::from_xdr_buffered(&mut read_stream).unwrap().message;
         let message = match match message {
             AuthenticatedMessage::V0(message) => message
@@ -85,6 +83,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
         auth_message.to_xdr_buffered(&mut writer);
         let result = writer.get_result();
         let result = stream.write(&result).await.unwrap();
+        buffer.clear();
+        let read_result = stream.read_buf(&mut buffer).await.unwrap();
+        let mut read_stream = ReadStream::new(buffer.clone());
+        let message = ArchivedMessage::<AuthenticatedMessage>::from_xdr_buffered(&mut read_stream).unwrap().message;
+
         break;
     }
     Ok(())
