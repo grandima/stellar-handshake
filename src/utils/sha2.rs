@@ -17,4 +17,3 @@ pub fn create_sha256(data: &[u8]) -> Uint256 {
     res.copy_from_slice(&digest.as_ref().to_vec());
     res
 }
-

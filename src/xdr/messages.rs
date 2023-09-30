@@ -23,7 +23,7 @@ pub struct Hello {
     pub ledger_version: u32,
     pub overlay_version: u32,
     pub overlay_min_version: u32,
-    pub network_id: [u8; 32],
+    pub network_id: Uint256,
     pub version_str: LimitedVarOpaque<100>,
     pub listening_port: u32,
     pub peer_id: NodeId,
@@ -48,7 +48,7 @@ impl XdrCodec for Hello {
         let ledger_version = u32::from_xdr_buffered(read_stream)?;
         let overlay_version = u32::from_xdr_buffered(read_stream)?;
         let overlay_min_version = u32::from_xdr_buffered(read_stream)?;
-        let network_id: [u8; 32] = XdrCodec::from_xdr_buffered(read_stream)?;
+        let network_id: Uint256 = XdrCodec::from_xdr_buffered(read_stream)?;
         let version_str = LimitedVarOpaque::<100>::from_xdr_buffered(read_stream)?;
         let listening_port =  u32::from_xdr_buffered(read_stream)?;
         let peer_id = NodeId::from_xdr_buffered(read_stream)?;

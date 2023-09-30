@@ -8,19 +8,16 @@ impl WriteStream {
     pub fn new() -> WriteStream {
         WriteStream { result: Vec::with_capacity(128) }
     }
-    pub fn write_next_binary_data(&mut self, value: &[u8]) {
+    pub fn write_binary_data(&mut self, value: &[u8]) {
         self.result.extend_from_slice(value);
         let length = value.len();
         let no_of_padding_bytes = extend_to_multiple_of_4(length) - length;
         self.result.extend(iter::repeat(0).take(no_of_padding_bytes));
     }
-    pub fn write_next_u32(&mut self, value: u32) {
+    pub fn write_u32(&mut self, value: u32) {
         self.result.extend(value.to_be_bytes().iter());
     }
-    pub fn write_next_i32(&mut self, value: i32) {
-        self.result.extend(value.to_be_bytes().iter());
-    }
-    pub fn write_next_u64(&mut self, value: u64) {
+    pub fn write_u64(&mut self, value: u64) {
         self.result.extend(value.to_be_bytes().iter());
     }
     pub fn get_result(self) -> Vec<u8> {
@@ -50,26 +47,26 @@ impl<T: AsRef<[u8]>> ReadStream<T> {
         Ok(())
     }
 
-    pub fn read_next_binary_data(&mut self, no_of_bytes: usize) -> Result<Vec<u8>, DecodeError> {
+    pub fn read_binary_data(&mut self, no_of_bytes: usize) -> Result<Vec<u8>, DecodeError> {
         self.ensure_size(extend_to_multiple_of_4(no_of_bytes))?;
         let result = self.source.as_ref()[self.read_index..self.read_index + no_of_bytes].to_vec();
         self.read_index += extend_to_multiple_of_4(no_of_bytes);
         Ok(result)
     }
-    pub fn read_next_u32(&mut self) -> Result<u32, DecodeError> {
-        let array: &[u8; 4] = self.read_next_byte_array()?;
+    pub fn read_u32(&mut self) -> Result<u32, DecodeError> {
+        let array: &[u8; 4] = self.read_byte_array()?;
         Ok(u32::from_be_bytes(*array))
     }
-    pub fn read_next_i32(&mut self) -> Result<i32, DecodeError> {
-        let array: &[u8; 4] = self.read_next_byte_array()?;
+    pub fn read_i32(&mut self) -> Result<i32, DecodeError> {
+        let array: &[u8; 4] = self.read_byte_array()?;
         Ok(i32::from_be_bytes(*array))
     }
-    pub fn read_next_u64(&mut self) -> Result<u64, DecodeError> {
-        let array: &[u8; 8] = self.read_next_byte_array()?;
+    pub fn read_u64(&mut self) -> Result<u64, DecodeError> {
+        let array: &[u8; 8] = self.read_byte_array()?;
         Ok(u64::from_be_bytes(*array))
     }
 
-    fn read_next_byte_array<const N: usize>(&mut self) -> Result<&[u8; N], DecodeError> {
+    fn read_byte_array<const N: usize>(&mut self) -> Result<&[u8; N], DecodeError> {
         let array: Result<&[u8; N], _> = (self.source.as_ref()[self.read_index..self.read_index + N]).try_into();
 
         match array {
@@ -123,14 +120,6 @@ pub enum DecodeError {
         remaining_no_of_bytes: isize,
     },
 
-    /// The XDR contains an invalid boolean
-    ///
-    /// The boolean is neither encoded as 0 or 1. The value found is given by `found_integer`.
-    InvalidBoolean {
-        found_integer: i32,
-        at_position: usize,
-    },
-
     /// The XDR contains a "Var Opaque" whose length exceeds the specified maximal length
     VarOpaqueExceedsMaxLength {
         at_position: usize,
@@ -138,27 +127,6 @@ pub enum DecodeError {
         actual_length: i32,
     },
 
-    /// The XDR contains a string whose length exceeds the specified maximal length
-    StringExceedsMaxLength {
-        at_position: usize,
-        max_length: i32,
-        actual_length: i32,
-    },
-
-    /// The XDR contains a "Var Array" whose length exceeds the specified maximal length
-    VarArrayExceedsMaxLength {
-        at_position: usize,
-        max_length: i32,
-        actual_length: i32,
-    },
-
-    /// The XDR contains an in invalid "Optional"
-    ///
-    /// The "optional" is neither encoded as 0 or 1. The value found is given by `has_code`.
-    InvalidOptional {
-        at_position: usize,
-        has_code: u32,
-    },
 
     /// The XDR contains an enum with an invalid discriminator
     ///

@@ -1,12 +1,12 @@
-use crate::xdr::constants::{ED25519_PUBLIC_KEY_BYTE_LENGTH, ED25519_PUBLIC_KEY_VERSION_BYTE};
+use crate::xdr::constants::{PUBLIC_KEY_LENGTH, PUBLIC_KEY_VERSION_BYTE};
 use crate::xdr::types::PublicKey;
 use crate::utils::base32::encode;
 impl PublicKey {
     pub fn to_encoding(&self) -> Vec<u8> {
         let key = self.as_binary();
-        encode_stellar_key(key, ED25519_PUBLIC_KEY_VERSION_BYTE)
+        encode_stellar_key(key, PUBLIC_KEY_VERSION_BYTE)
     }
-    pub fn as_binary(&self) -> &[u8; ED25519_PUBLIC_KEY_BYTE_LENGTH] {
+    pub fn as_binary(&self) -> &[u8; PUBLIC_KEY_LENGTH] {
         match self {
             PublicKey::PublicKeyTypeEd25519(key) => key,
         }

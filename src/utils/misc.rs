@@ -1,8 +1,9 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 use rand::random;
 use crate::utils::sha2::{create_sha256, create_sha256_hmac};
+use crate::xdr::types::Uint256;
 
-pub fn generate_nonce() -> [u8; 32] {
+pub fn generate_nonce() -> Uint256 {
     let nonce = random::<u32>().to_be_bytes();
     //TODO: remove
     // let nonce = [

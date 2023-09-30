@@ -10,13 +10,13 @@ mod utils;
 
 use std::io::Write;
 use rand::{random, Rng, thread_rng};
-use keypair::Keypair;
+use keypair::Keychain;
 use node_config::NodeConfig;
 use connection_authentication::*;
 use crate::connection::Connection;
-use crate::xdr::constants::ED25519_SECRET_SEED_BYTE_LENGTH;
-use crate::xdr::compound_types::{LimitedVarOpaque, UnlimitedVarOpaque};
-use crate::xdr::stellar_messages::Hello;
+use crate::xdr::constants::SEED_LENGTH;
+use crate::xdr::compound_types::{LimitedVarOpaque};
+use crate::xdr::messages::Hello;
 use crate::xdr::streams::{ReadStream, WriteStream};
 use crate::xdr::types::{ArchivedMessage, AuthenticatedMessage, AuthenticatedMessageV0, HmacSha256Mac, NodeId, StellarMessage};
 use crate::xdr::xdr_codec::XdrCodec;
@@ -36,9 +36,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let payload = &decoded[..decoded.len()-2];
     let data = &payload[1..];
     assert_eq!(data.len(), 32);
-    let mut seed = [0u8; ED25519_SECRET_SEED_BYTE_LENGTH];
+    let mut seed = [0u8; SEED_LENGTH];
     seed.copy_from_slice(data);
-    let keypair = Keypair::from(seed);
+    // let keypair = Keychain::from(&seed);
+    let keypair = Keychain::gen();
     let node_config = NodeConfig::default();
     let mut connection = Connection::new(ConnectionAuthentication::new(keypair, node_config.network));
     let hello = Hello{
@@ -48,7 +49,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         network_id: connection.authentication.network_id,
         version_str: node_config.node_info.version_string,
         listening_port: node_config.listening_port,
-        peer_id: NodeId::PublicKeyTypeEd25519(connection.authentication.keypair().public_key().clone()),
+        peer_id: NodeId::PublicKeyTypeEd25519(connection.authentication.keychain().public_key().clone()),
         cert: connection.authentication.get_auth_cert(SystemTime::now()).clone(),
         nonce: connection.local_nonce
     };

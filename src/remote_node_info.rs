@@ -2,8 +2,8 @@ use base64::Engine;
 
 use crate::node_config::NodeInfo;
 use crate::public_key::encode_stellar_key;
-use crate::xdr::constants::ED25519_PUBLIC_KEY_VERSION_BYTE;
-use crate::xdr::stellar_messages::Hello;
+use crate::xdr::constants::PUBLIC_KEY_VERSION_BYTE;
+use crate::xdr::messages::Hello;
 use crate::xdr::types::Uint256;
 
 #[derive(Clone)]

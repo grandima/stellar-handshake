@@ -1,9 +1,10 @@
 use std::fs::read;
 use crate::xdr::compound_types::LimitedVarOpaque;
-use crate::xdr::stellar_messages::{Auth, Hello};
+use crate::xdr::messages::{Auth, Hello};
 use crate::xdr::streams::{DecodeError, ReadStream, WriteStream};
 use crate::xdr::xdr_codec::XdrCodec;
 
+pub type Uint512 = [u8; 64];
 pub type Uint256 = [u8; 32];
 pub type Uint64 = [u8; 8];
 #[derive(Debug)]
@@ -22,14 +23,14 @@ impl <T: XdrCodec> XdrCodec for ArchivedMessage<T> {
         let mut internal_stream = WriteStream::new();
         self.message.to_xdr_buffered(&mut internal_stream);
         let res = internal_stream.get_result();
-        write_stream.write_next_u32(res.len() as u32);
-        write_stream.write_next_binary_data(&res);
+        write_stream.write_u32(res.len() as u32);
+        write_stream.write_binary_data(&res);
     }
 
     fn  from_xdr_buffered<R: AsRef<[u8]>>(read_stream: &mut ReadStream<R>) -> Result<Self, DecodeError> {
-        let mut buffer = read_stream.read_next_binary_data(4)?;
+        let mut buffer = read_stream.read_binary_data(4)?;
         let mut length = u32::from_be_bytes([buffer[0] & 0x7f, buffer[1], buffer[2], buffer[3]]);
-        let buff = read_stream.read_next_binary_data(length as usize)?;
+        let buff = read_stream.read_binary_data(length as usize)?;
         let mut new_read_stream = ReadStream::new(buff);
         Ok(Self{message: T::from_xdr_buffered(&mut new_read_stream)?})
     }
@@ -124,12 +125,12 @@ pub enum MessageType {
 
 impl XdrCodec for MessageType {
     fn to_xdr_buffered(&self, write_stream: &mut WriteStream) {
-        let value = *self as i32;
+        let value = *self as u32;
         value.to_xdr_buffered(write_stream);
     }
 
     fn from_xdr_buffered<T: AsRef<[u8]>>(read_stream: &mut ReadStream<T>) -> Result<Self, DecodeError> {
-        let enum_value = i32::from_xdr_buffered(read_stream)?;
+        let enum_value = u32::from_xdr_buffered(read_stream)?;
         match enum_value {
             2 => Ok(MessageType::Auth),
             13 => Ok(MessageType::Hello),
@@ -139,7 +140,7 @@ impl XdrCodec for MessageType {
 }
 #[derive(Debug)]
 pub struct HmacSha256Mac {
-    pub mac: [u8; 32],
+    pub mac: Uint256,
 }
 impl Default for HmacSha256Mac {
     fn default() -> Self {
@@ -152,7 +153,7 @@ impl XdrCodec for HmacSha256Mac {
     }
 
     fn from_xdr_buffered<T: AsRef<[u8]>>(read_stream: &mut ReadStream<T>) -> Result<Self, DecodeError> {
-        Ok(HmacSha256Mac { mac: <[u8; 32]>::from_xdr_buffered(read_stream)? })
+        Ok(HmacSha256Mac { mac: <Uint256>::from_xdr_buffered(read_stream)? })
     }
 }
 #[derive(Copy, Clone)]
@@ -162,11 +163,11 @@ pub enum EnvelopeType {
 
 impl XdrCodec for EnvelopeType {
     fn to_xdr_buffered(&self, write_stream: &mut WriteStream) {
-        let value = *self as i32;
+        let value = *self as u32;
         value.to_xdr_buffered(write_stream);
     }
     fn from_xdr_buffered<T: AsRef<[u8]>>(read_stream: &mut ReadStream<T>) -> Result<Self, DecodeError> {
-        let enum_value = i32::from_xdr_buffered(read_stream)?;
+        let enum_value = u32::from_xdr_buffered(read_stream)?;
         match enum_value {
             3 => Ok(EnvelopeType::Auth),
             _ => Err(DecodeError::InvalidEnumDiscriminator { at_position: read_stream.get_position() }),
@@ -181,12 +182,12 @@ pub enum PublicKeyType {
 
 impl XdrCodec for PublicKeyType {
     fn to_xdr_buffered(&self, write_stream: &mut WriteStream) {
-        let value = *self as i32;
+        let value = *self as u32;
         value.to_xdr_buffered(write_stream);
     }
 
     fn from_xdr_buffered<T: AsRef<[u8]>>(read_stream: &mut ReadStream<T>) -> Result<Self, DecodeError> {
-        let enum_value = i32::from_xdr_buffered(read_stream)?;
+        let enum_value = u32::from_xdr_buffered(read_stream)?;
         match enum_value {
             0 => Ok(PublicKeyType::PublicKeyTypeEd25519),
             _ => Err(DecodeError::InvalidEnumDiscriminator { at_position: read_stream.get_position() }),

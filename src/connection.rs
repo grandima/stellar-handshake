@@ -7,7 +7,7 @@ use crate::utils::misc::{generate_nonce};
 use crate::utils::sha2::{create_sha256_hmac};
 use crate::xdr::auth_cert::AuthCert;
 use crate::xdr::constants::SHA256_LENGTH;
-use crate::xdr::stellar_messages::{Auth, Hello};
+use crate::xdr::messages::{Auth, Hello};
 use crate::xdr::streams::WriteStream;
 use crate::xdr::types::{ArchivedMessage, AuthenticatedMessage, AuthenticatedMessageV0, HmacSha256Mac, StellarMessage, Uint256, Uint64};
 use crate::xdr::xdr_codec::XdrCodec;

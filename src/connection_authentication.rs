@@ -3,7 +3,6 @@ use std::fmt::format;
 use crate::keypair::*;
 //use dryoc::rng::randombytes_buf;
 use dryoc::classic::crypto_core::crypto_scalarmult_base;
-use crate::xdr::auth_cert;
 use crate::xdr::auth_cert::AuthCert;
 use std::time::{SystemTime, UNIX_EPOCH};
 use dryoc::classic::crypto_sign::crypto_sign_verify_detached;
@@ -11,7 +10,7 @@ use dryoc::rng::{copy_randombytes, randombytes_buf};
 use rand::random;
 use crate::utils::misc::system_time_to_u64_millis;
 use crate::utils::sha2::{create_sha256, create_sha256_hmac};
-use crate::xdr::constants::{ED25519_PUBLIC_KEY_BYTE_LENGTH, ED25519_SECRET_KEY_BYTE_LENGTH, ED25519_SECRET_SEED_BYTE_LENGTH, SHA256_LENGTH};
+use crate::xdr::constants::{PUBLIC_KEY_LENGTH, ED25519_SECRET_KEY_BYTE_LENGTH, SEED_LENGTH, SHA256_LENGTH};
 use crate::xdr::curve25519public::Curve25519Public;
 use crate::xdr::streams::WriteStream;
 use crate::xdr::types::{EnvelopeType, Signature, Uint256};
@@ -26,26 +25,26 @@ pub enum MacKeyType {
 #[derive(Debug)]
 pub struct ConnectionAuthentication {
     pub called_remote_keys: HashMap<Uint256, Vec<u8>>,
-    keypair: Keypair,
+    keychain: Keychain,
     pub network_id: Uint256,
-    pub secret_key_ecdh: [u8; ED25519_SECRET_SEED_BYTE_LENGTH],
-    pub public_key_ecdh: [u8; ED25519_PUBLIC_KEY_BYTE_LENGTH],
+    pub secret_key_ecdh: [u8; SEED_LENGTH],
+    pub public_key_ecdh: [u8; PUBLIC_KEY_LENGTH],
     auth_cert: Option<AuthCert>,
     auth_cert_expiration: u64,
 }
 
 impl ConnectionAuthentication {
     const  AUTH_EXPIRATION_LIMIT: u64 = 360000; //60 minutes
-    pub fn new(keypair: Keypair, network_id: impl AsRef<[u8]>) -> Self {
+    pub fn new(keypair: Keychain, network_id: impl AsRef<[u8]>) -> Self {
         let mut hashed_network_id = [0u8; 32];
         hashed_network_id.copy_from_slice(&create_sha256(network_id.as_ref()));
-        let mut secret_key_ecdh = [0u8; ED25519_SECRET_SEED_BYTE_LENGTH];
+        let mut secret_key_ecdh = [0u8; SEED_LENGTH];
         copy_randombytes(&mut secret_key_ecdh);
-        let mut public_key_ecdh = [0u8; ED25519_PUBLIC_KEY_BYTE_LENGTH];
+        let mut public_key_ecdh = [0u8; PUBLIC_KEY_LENGTH];
         crypto_scalarmult_base(&mut public_key_ecdh, &secret_key_ecdh);
         Self {
             called_remote_keys: Default::default(),
-            keypair,
+            keychain: keypair,
             network_id: hashed_network_id,
             public_key_ecdh,
             secret_key_ecdh,
@@ -153,7 +152,7 @@ impl ConnectionAuthentication {
         signature_data.extend(bytes_expiration.iter());
         signature_data.extend(self.public_key_ecdh.iter());
         let hashed_signature_data = create_sha256(&signature_data);
-        let signed = self.keypair.sign(hashed_signature_data);
+        let signed = self.keychain.sign(hashed_signature_data);
         let sig = Signature::new(signed.to_vec()).unwrap();
         AuthCert {
             pubkey: Curve25519Public {key: self.public_key_ecdh},
@@ -161,7 +160,7 @@ impl ConnectionAuthentication {
             sig
         }
     }
-    pub fn keypair(&self) -> &Keypair {
-        &self.keypair
+    pub fn keychain(&self) -> &Keychain {
+        &self.keychain
     }
 }
