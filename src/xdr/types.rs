@@ -4,9 +4,6 @@ use crate::xdr::messages::{Auth, Hello};
 use crate::xdr::streams::{DecodeError, ReadStream, WriteStream};
 use crate::xdr::xdr_codec::XdrCodable;
 
-pub type Uint512 = [u8; 64];
-pub type Uint256 = [u8; 32];
-pub type Uint64 = [u8; 8];
 #[derive(Debug)]
 pub struct XdrCoded<T: XdrCodable> (T);
 
@@ -36,87 +33,6 @@ impl <T: XdrCodable> XdrCodable for XdrCoded<T> {
         Ok(Self(T::decode(&mut new_read_stream)?))
     }
 }
-
-#[derive(Debug,Clone)]
-pub enum AuthenticatedMessage {
-    V0(AuthenticatedMessageV0),
-}
-impl XdrCodable for AuthenticatedMessage {
-    fn encode(&self, write_stream: &mut WriteStream) {
-        match self {
-            AuthenticatedMessage::V0(value) => {
-                0u32.encode(write_stream);
-                value.encode(write_stream)
-            }
-        }
-    }
-
-    fn decode<T: AsRef<[u8]>>(read_stream: &mut ReadStream<T>) -> Result<Self, DecodeError> {
-        match u32::decode(read_stream)? {
-            0 => Ok(AuthenticatedMessage::V0(AuthenticatedMessageV0::decode(read_stream)?)),
-            value => Err(DecodeError::InvalidEnumDiscriminator { at_position: value as usize})
-        }
-    }
-
-}
-impl AuthenticatedMessage where Self: XdrCodable {
-    //TODO: remove message
-    pub fn compare(&self, vec: &[u8]) -> bool {
-        let mut writer = WriteStream::new();
-        self.encode(&mut writer);
-        writer.get_result() == vec
-    }
-}
-#[derive(Debug, Clone)]
-pub struct AuthenticatedMessageV0 {
-    pub sequence: Uint64,
-    pub message: StellarMessage,
-    pub mac: HmacSha256Mac,
-}
-
-impl XdrCodable for AuthenticatedMessageV0 {
-    fn encode(&self, write_stream: &mut WriteStream) {
-        self.sequence.encode(write_stream);
-        self.message.encode(write_stream);
-        self.mac.encode(write_stream);
-    }
-
-    fn decode<T: AsRef<[u8]>>(read_stream: &mut ReadStream<T>) -> Result<Self, DecodeError> {
-        Ok(AuthenticatedMessageV0 {
-            sequence: <Uint64>::decode(read_stream)?,
-            message: StellarMessage::decode(read_stream)?,
-            mac: HmacSha256Mac::decode(read_stream)?,
-        })
-    }
-}
-#[derive(Debug, Clone)]
-pub enum StellarMessage {
-    Hello(Hello),
-    Auth(Auth),
-}
-impl XdrCodable for StellarMessage {
-    fn encode(&self, write_stream: &mut WriteStream) {
-        match self {
-            StellarMessage::Hello(value) => {
-                MessageType::Hello.encode(write_stream);
-                value.encode(write_stream)
-            },
-            StellarMessage::Auth(value) => {
-                MessageType::Auth.encode(write_stream);
-                value.encode(write_stream)
-            },
-        }
-    }
-
-    fn decode<T: AsRef<[u8]>>(read_stream: &mut ReadStream<T>) -> Result<Self, DecodeError> {
-        match MessageType::decode(read_stream)? {
-            MessageType::Hello => Ok(StellarMessage::Hello(Hello::decode(read_stream)?)),
-            MessageType::Auth => Ok(StellarMessage::Auth(Auth::decode(read_stream)?)),
-        }
-    }
-}
-
-
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum MessageType {
@@ -217,7 +133,10 @@ impl XdrCodable for PublicKey {
         }
     }
 }
-pub type NodeId = PublicKey;
 
+pub type Uint64 = [u8; 8];
+pub type Uint256 = [u8; 32];
+pub type Uint512 = [u8; 64];
+pub type NodeId = PublicKey;
 pub type Signature = LimitedVarOpaque<64>;
 

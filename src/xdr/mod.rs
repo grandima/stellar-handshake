@@ -1,4 +1,4 @@
-pub mod curve25519Public;
+pub mod curve25519_public;
 pub mod auth_cert;
 pub mod xdr_codec;
 pub mod streams;
@@ -6,4 +6,4 @@ pub mod types;
 pub mod messages;
 pub(crate) mod compound_types;
 pub mod constants;
-pub mod Curve25519Secret;
+pub mod curve25519_secret;

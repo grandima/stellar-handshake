@@ -57,10 +57,6 @@ impl<T: AsRef<[u8]>> ReadStream<T> {
         let array: &[u8; 4] = self.read_byte_array()?;
         Ok(u32::from_be_bytes(*array))
     }
-    pub fn read_i32(&mut self) -> Result<i32, DecodeError> {
-        let array: &[u8; 4] = self.read_byte_array()?;
-        Ok(i32::from_be_bytes(*array))
-    }
     pub fn read_u64(&mut self) -> Result<u64, DecodeError> {
         let array: &[u8; 8] = self.read_byte_array()?;
         Ok(u64::from_be_bytes(*array))
@@ -68,7 +64,6 @@ impl<T: AsRef<[u8]>> ReadStream<T> {
 
     fn read_byte_array<const N: usize>(&mut self) -> Result<&[u8; N], DecodeError> {
         let array: Result<&[u8; N], _> = (self.source.as_ref()[self.read_index..self.read_index + N]).try_into();
-
         match array {
             Ok(array) => {
                 self.read_index += N;
@@ -79,14 +74,6 @@ impl<T: AsRef<[u8]>> ReadStream<T> {
     }
     pub fn get_position(&self) -> usize {
         self.read_index
-    }
-
-    pub fn no_of_bytes_left_to_read(&self) -> isize {
-        self.source.as_ref().len() as isize - self.read_index as isize
-    }
-    //TODO: remove this code
-    pub fn get_source(&self) -> &T {
-        &self.source
     }
 }
 

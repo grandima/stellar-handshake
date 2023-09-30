@@ -16,9 +16,9 @@ use connection_authentication::*;
 use crate::connection::Connection;
 use crate::xdr::constants::SEED_LENGTH;
 use crate::xdr::compound_types::{LimitedVarOpaque};
-use crate::xdr::messages::Hello;
+use crate::xdr::messages::{AuthenticatedMessage, AuthenticatedMessageV0, Hello, StellarMessage};
 use crate::xdr::streams::{ReadStream, WriteStream};
-use crate::xdr::types::{XdrCoded, AuthenticatedMessage, AuthenticatedMessageV0, HmacSha256Mac, NodeId, StellarMessage};
+use crate::xdr::types::{XdrCoded,  HmacSha256Mac, NodeId};
 use crate::xdr::xdr_codec::XdrCodable;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
@@ -62,7 +62,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let result = stream.write(&writer.get_result()).await.unwrap();
     let mut buffer: Vec<u8> = Vec::with_capacity(400);
     loop {
-        let read_size = stream.read_buf(&mut buffer).await.unwrap();
+        let read_size = stream.read_exact(&mut buffer).await.unwrap();
         if read_size == 0 {
             return Ok(());
         }

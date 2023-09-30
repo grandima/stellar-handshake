@@ -11,7 +11,7 @@ use rand::random;
 use crate::utils::misc::system_time_to_u64_millis;
 use crate::utils::sha2::{create_sha256, create_sha256_hmac};
 use crate::xdr::constants::{PUBLIC_KEY_LENGTH, ED25519_SECRET_KEY_BYTE_LENGTH, SEED_LENGTH, SHA256_LENGTH};
-use crate::xdr::curve25519Public::Curve25519Public;
+use crate::xdr::curve25519_public::Curve25519Public;
 use crate::xdr::streams::WriteStream;
 use crate::xdr::types::{EnvelopeType, Signature, Uint256};
 use crate::xdr::xdr_codec::XdrCodable;
