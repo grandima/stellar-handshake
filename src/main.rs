@@ -18,7 +18,7 @@ use crate::xdr::constants::SEED_LENGTH;
 use crate::xdr::compound_types::{LimitedVarOpaque};
 use crate::xdr::messages::Hello;
 use crate::xdr::streams::{ReadStream, WriteStream};
-use crate::xdr::types::{ArchivedMessage, AuthenticatedMessage, AuthenticatedMessageV0, HmacSha256Mac, NodeId, StellarMessage};
+use crate::xdr::types::{XdrCoded, AuthenticatedMessage, AuthenticatedMessageV0, HmacSha256Mac, NodeId, StellarMessage};
 use crate::xdr::xdr_codec::XdrCodec;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
@@ -55,7 +55,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     };
     let authenticated_message = AuthenticatedMessageV0{message: StellarMessage::Hello(hello), mac: HmacSha256Mac::default(), sequence:[0; 8]};
     let versionized_message = AuthenticatedMessage::V0(authenticated_message);
-    let archived_message = ArchivedMessage::new(versionized_message);
+    let archived_message = XdrCoded::new(versionized_message);
     let mut  writer = WriteStream::new();
     archived_message.to_xdr_buffered(&mut writer);
     let mut stream = tokio::net::TcpStream::connect("127.0.0.1:11601").await.unwrap();
@@ -67,7 +67,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             return Ok(());
         }
         let mut read_stream = ReadStream::new(buffer.clone());
-        let message = ArchivedMessage::<AuthenticatedMessage>::from_xdr_buffered(&mut read_stream).unwrap().message;
+        let message = XdrCoded::<AuthenticatedMessage>::from_xdr_buffered(&mut read_stream).unwrap().value().clone();
         let message = match match message {
             AuthenticatedMessage::V0(message) => message
         }.message {
@@ -85,7 +85,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         buffer.clear();
         let read_result = stream.read_buf(&mut buffer).await.unwrap();
         let mut read_stream = ReadStream::new(buffer.clone());
-        let message = ArchivedMessage::<AuthenticatedMessage>::from_xdr_buffered(&mut read_stream).unwrap().message;
+        let message = XdrCoded::<AuthenticatedMessage>::from_xdr_buffered(&mut read_stream).unwrap().value();
 
         break;
     }

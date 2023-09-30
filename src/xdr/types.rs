@@ -8,20 +8,21 @@ pub type Uint512 = [u8; 64];
 pub type Uint256 = [u8; 32];
 pub type Uint64 = [u8; 8];
 #[derive(Debug)]
-pub struct ArchivedMessage<T: XdrCodec> {
-    pub message: T
-}
+pub struct XdrCoded<T: XdrCodec> (T);
 
-impl<T: XdrCodec> ArchivedMessage<T> {
-    pub fn new(message: T) -> Self {
-        Self {message}
+impl<T: XdrCodec> XdrCoded<T> {
+    pub fn new(value: T) -> Self {
+        Self (value)
+    }
+    pub fn value(&self) -> &T {
+        &self.0
     }
 }
 
-impl <T: XdrCodec> XdrCodec for ArchivedMessage<T> {
+impl <T: XdrCodec> XdrCodec for XdrCoded<T> {
     fn to_xdr_buffered(&self, write_stream: &mut WriteStream) {
         let mut internal_stream = WriteStream::new();
-        self.message.to_xdr_buffered(&mut internal_stream);
+        self.0.to_xdr_buffered(&mut internal_stream);
         let res = internal_stream.get_result();
         write_stream.write_u32(res.len() as u32);
         write_stream.write_binary_data(&res);
@@ -32,11 +33,11 @@ impl <T: XdrCodec> XdrCodec for ArchivedMessage<T> {
         let mut length = u32::from_be_bytes([buffer[0] & 0x7f, buffer[1], buffer[2], buffer[3]]);
         let buff = read_stream.read_binary_data(length as usize)?;
         let mut new_read_stream = ReadStream::new(buff);
-        Ok(Self{message: T::from_xdr_buffered(&mut new_read_stream)?})
+        Ok(Self(T::from_xdr_buffered(&mut new_read_stream)?))
     }
 }
 
-#[derive(Debug,)]
+#[derive(Debug,Clone)]
 pub enum AuthenticatedMessage {
     V0(AuthenticatedMessageV0),
 }
@@ -66,7 +67,7 @@ impl AuthenticatedMessage where Self: XdrCodec {
         writer.get_result() == vec
     }
 }
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct AuthenticatedMessageV0 {
     pub sequence: Uint64,
     pub message: StellarMessage,
@@ -138,7 +139,7 @@ impl XdrCodec for MessageType {
         }
     }
 }
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct HmacSha256Mac {
     pub mac: Uint256,
 }

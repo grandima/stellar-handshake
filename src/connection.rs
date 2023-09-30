@@ -9,7 +9,7 @@ use crate::xdr::auth_cert::AuthCert;
 use crate::xdr::constants::SHA256_LENGTH;
 use crate::xdr::messages::{Auth, Hello};
 use crate::xdr::streams::WriteStream;
-use crate::xdr::types::{ArchivedMessage, AuthenticatedMessage, AuthenticatedMessageV0, HmacSha256Mac, StellarMessage, Uint256, Uint64};
+use crate::xdr::types::{XdrCoded, AuthenticatedMessage, AuthenticatedMessageV0, HmacSha256Mac, StellarMessage, Uint256, Uint64};
 use crate::xdr::xdr_codec::XdrCodec;
 
 //TODO: do i need this?
@@ -35,10 +35,10 @@ impl Connection {
     pub fn verify_remote_cert(&self, time: SystemTime, remote_public_key: &Uint256, cert: AuthCert) {
         let expiration = cert.expiration;
     }
-    pub fn auth_message(&mut self) -> ArchivedMessage<AuthenticatedMessage> {
+    pub fn auth_message(&mut self) -> XdrCoded<AuthenticatedMessage> {
         let message = StellarMessage::Auth(Auth{flags: 100});
         let mac = self.mac_for_authenticated_message(&message);
-        let messageV0 = ArchivedMessage::new(AuthenticatedMessage::V0(AuthenticatedMessageV0{message: message.clone(), sequence: self.local_sequence, mac}));
+        let messageV0 = XdrCoded::new(AuthenticatedMessage::V0(AuthenticatedMessageV0{message: message.clone(), sequence: self.local_sequence, mac}));
         messageV0
     }
 
