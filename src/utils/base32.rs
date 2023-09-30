@@ -1,7 +1,7 @@
 //TODO do I need lifetime here?
 const ALPHABET: &'static [u8; 32] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
 
-pub fn encode<T: AsRef<[u8]>>(binary: T) -> Vec<u8> {
+pub fn encode(binary: impl AsRef<[u8]>) -> Vec<u8> {
     let mut buffer = Vec::with_capacity(binary.as_ref().len() * 2);
     let mut shift = 3;
     let mut carry = 0;
@@ -24,6 +24,5 @@ pub fn encode<T: AsRef<[u8]>>(binary: T) -> Vec<u8> {
     if shift != 3 {
         buffer.push(ALPHABET[(carry & 0x1f) as usize]);
     }
-
     buffer
 }

@@ -1,16 +1,7 @@
+use std::time::{SystemTime, UNIX_EPOCH};
 use rand::random;
 use crate::utils::sha2::{create_sha256, create_sha256_hmac};
 
-pub fn increase_buffer_by_one(buf: &mut [u8]) {
-    let mut i = buf.len();
-    while i > 0 {
-        i -= 1;
-        buf[i] = buf[i].wrapping_add(1);
-        if buf[i] != 0 {
-            break;
-        }
-    }
-}
 pub fn generate_nonce() -> [u8; 32] {
     let nonce = random::<u32>().to_be_bytes();
     //TODO: remove
@@ -20,4 +11,12 @@ pub fn generate_nonce() -> [u8; 32] {
     let mut local_nonce = [0u8; 32];
     local_nonce.copy_from_slice(&create_sha256(&nonce));
     local_nonce
+}
+
+pub fn system_time_to_u64_millis(time: &SystemTime) -> u64 {
+    time.duration_since(UNIX_EPOCH)
+        .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)
+        .map(|duration_since_epoch| duration_since_epoch.as_millis())
+        .and_then(|millis_since_epoch| millis_since_epoch.try_into().map_err(|e| Box::new(e) as Box<dyn std::error::Error>))
+        .unwrap()
 }

@@ -6,8 +6,10 @@ use dryoc::classic::crypto_core::crypto_scalarmult_base;
 use crate::xdr::auth_cert;
 use crate::xdr::auth_cert::AuthCert;
 use std::time::{SystemTime, UNIX_EPOCH};
+use dryoc::classic::crypto_sign::crypto_sign_verify_detached;
 use dryoc::rng::{copy_randombytes, randombytes_buf};
 use rand::random;
+use crate::utils::misc::system_time_to_u64_millis;
 use crate::utils::sha2::{create_sha256, create_sha256_hmac};
 use crate::xdr::constants::{ED25519_PUBLIC_KEY_BYTE_LENGTH, ED25519_SECRET_KEY_BYTE_LENGTH, ED25519_SECRET_SEED_BYTE_LENGTH, SHA256_LENGTH};
 use crate::xdr::curve25519public::Curve25519Public;
@@ -51,7 +53,31 @@ impl ConnectionAuthentication {
             auth_cert_expiration: 0
         }
     }
-    pub(crate) fn mac_key(&mut self,
+    pub fn verify_remote_cert(&self,
+                              date: &SystemTime,
+                              remote_public_key: &Uint256,
+                              cert: &AuthCert
+    ) -> bool {
+        let expiration = cert.expiration;
+        let time = system_time_to_u64_millis(&date);
+        if expiration < (time / 1000) {
+            return false
+        }
+        let mut writer = WriteStream::new();
+        EnvelopeType::Auth.to_xdr_buffered(&mut writer);
+        cert.expiration.to_xdr_buffered(&mut writer);
+        let envelope = writer.get_result();
+        let mut raw_sig_data = self.network_id.to_vec();
+        raw_sig_data.extend(envelope.iter());
+        raw_sig_data.extend_from_slice(&cert.pubkey.key);
+        let hashed = create_sha256(&raw_sig_data);
+
+        let mut sig = [0u8; 64];
+        sig.copy_from_slice(cert.sig.get_vec());
+        crypto_sign_verify_detached(&sig, remote_public_key, &hashed).is_err()
+    }
+
+    pub fn mac_key(&mut self,
                           mac_key_type: MacKeyType,
                           local_nonce: &Uint256,
                           remote_nonce: &Uint256,
@@ -93,15 +119,7 @@ impl ConnectionAuthentication {
 
     //TODO think how to return a reference to authcert
     pub fn get_auth_cert(&mut self, validAt: SystemTime) -> AuthCert {
-        let duration_since_epoch = validAt
-            .duration_since(UNIX_EPOCH)
-            .expect("Time went backwards");
-
-        let millis_since_epoch = duration_since_epoch.as_millis();
-        let millis_as_u64: u64 = millis_since_epoch.try_into().unwrap_or_else(|e| {
-            panic!("Failed to convert millis_since_epoch to u64: {}", e);
-        });
-        let next_expiration = millis_as_u64 + Self::AUTH_EXPIRATION_LIMIT / 2;
+        let next_expiration = system_time_to_u64_millis(&validAt);
 
         let cert = match self.auth_cert.take() {
             Some(cert) if self.auth_cert_expiration >= next_expiration => cert,
@@ -128,7 +146,7 @@ impl ConnectionAuthentication {
         // self.auth_cert_expiration = 1695728543325 + Self::AUTH_EXPIRATION_LIMIT;
         let bytes_expiration = self.auth_cert_expiration.to_be_bytes();
         let mut writer = WriteStream::new();
-        let xdr_envelope_type = EnvelopeType::Auth.to_xdr_buffered(&mut writer);
+        EnvelopeType::Auth.to_xdr_buffered(&mut writer);
         let xdr_envelope_type_result = writer.get_result();
         let mut signature_data = self.network_id.clone().to_vec();
         signature_data.extend(xdr_envelope_type_result.iter());

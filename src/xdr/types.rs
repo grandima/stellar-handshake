@@ -113,6 +113,9 @@ impl XdrCodec for StellarMessage {
         }
     }
 }
+
+
+
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum MessageType {
     Auth = 2,
