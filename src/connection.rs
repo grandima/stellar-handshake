@@ -10,7 +10,7 @@ use crate::xdr::constants::SHA256_LENGTH;
 use crate::xdr::messages::{Auth, Hello};
 use crate::xdr::streams::WriteStream;
 use crate::xdr::types::{XdrCoded, AuthenticatedMessage, AuthenticatedMessageV0, HmacSha256Mac, StellarMessage, Uint256, Uint64};
-use crate::xdr::xdr_codec::XdrCodec;
+use crate::xdr::xdr_codec::XdrCodable;
 
 //TODO: do i need this?
 const SHA_LENGTH: u32 = 32;
@@ -47,7 +47,7 @@ impl Connection {
             HmacSha256Mac{mac: [0u8; SHA256_LENGTH]}
         } else if let Some(sending_mac_key) = &self.sending_mac_key {
             let mut writer = WriteStream::new();
-            message.to_xdr_buffered(&mut writer);
+            message.encode(&mut writer);
             let mut data =  self.local_sequence.to_vec();
             data.extend_from_slice(&writer.get_result());
             let mut mac = [0u8; SHA256_LENGTH];

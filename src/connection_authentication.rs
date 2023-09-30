@@ -11,10 +11,10 @@ use rand::random;
 use crate::utils::misc::system_time_to_u64_millis;
 use crate::utils::sha2::{create_sha256, create_sha256_hmac};
 use crate::xdr::constants::{PUBLIC_KEY_LENGTH, ED25519_SECRET_KEY_BYTE_LENGTH, SEED_LENGTH, SHA256_LENGTH};
-use crate::xdr::curve25519public::Curve25519Public;
+use crate::xdr::curve25519Public::Curve25519Public;
 use crate::xdr::streams::WriteStream;
 use crate::xdr::types::{EnvelopeType, Signature, Uint256};
-use crate::xdr::xdr_codec::XdrCodec;
+use crate::xdr::xdr_codec::XdrCodable;
 
 
 pub enum MacKeyType {
@@ -63,8 +63,8 @@ impl ConnectionAuthentication {
             return false
         }
         let mut writer = WriteStream::new();
-        EnvelopeType::Auth.to_xdr_buffered(&mut writer);
-        cert.expiration.to_xdr_buffered(&mut writer);
+        EnvelopeType::Auth.encode(&mut writer);
+        cert.expiration.encode(&mut writer);
         let envelope = writer.get_result();
         let mut raw_sig_data = self.network_id.to_vec();
         raw_sig_data.extend(envelope.iter());
@@ -145,7 +145,7 @@ impl ConnectionAuthentication {
         // self.auth_cert_expiration = 1695728543325 + Self::AUTH_EXPIRATION_LIMIT;
         let bytes_expiration = self.auth_cert_expiration.to_be_bytes();
         let mut writer = WriteStream::new();
-        EnvelopeType::Auth.to_xdr_buffered(&mut writer);
+        EnvelopeType::Auth.encode(&mut writer);
         let xdr_envelope_type_result = writer.get_result();
         let mut signature_data = self.network_id.clone().to_vec();
         signature_data.extend(xdr_envelope_type_result.iter());

@@ -1,5 +1,5 @@
 use crate::xdr::streams::{DecodeError, EncodeError, ReadStream, WriteStream};
-use crate::xdr::xdr_codec::XdrCodec;
+use crate::xdr::xdr_codec::XdrCodable;
 #[derive(Debug, Clone)]
 pub struct LimitedVarOpaque<const N: i32>(Vec<u8>);
 impl<const N: i32> LimitedVarOpaque<N> {
@@ -26,15 +26,15 @@ impl <const N: i32> TryFrom<&str> for LimitedVarOpaque<N> {
     }
 }
 
-impl<const N: i32> XdrCodec for LimitedVarOpaque<N> {
+impl<const N: i32> XdrCodable for LimitedVarOpaque<N> {
     /// The XDR encoder implementation for `LimitedVarOpaque`
-    fn to_xdr_buffered(&self, write_stream: &mut WriteStream) {
+    fn encode(&self, write_stream: &mut WriteStream) {
         write_stream.write_u32(self.0.len() as u32);
         write_stream.write_binary_data(&self.0[..]);
     }
 
     /// The XDR decoder implementation for `LimitedVarOpaque`
-    fn from_xdr_buffered<R: AsRef<[u8]>>(read_stream: &mut ReadStream<R>) -> Result<Self, DecodeError> {
+    fn decode<R: AsRef<[u8]>>(read_stream: &mut ReadStream<R>) -> Result<Self, DecodeError> {
         let length = read_stream.read_u32()? as i32;
         match length > N {
             true => Err(DecodeError::VarOpaqueExceedsMaxLength {
