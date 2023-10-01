@@ -30,11 +30,11 @@ fn crc<T: AsRef<[u8]>>(byte_array: T) -> u16 {
         let mut code: u16 = crc >> 8 & 0xff;
         code ^= *byte as u16;
         code ^= code >> 4;
-        crc = (crc << 8) & 0xffff;
+        crc <<= 8;
         crc ^= code;
-        code = (code << 5) & 0xffff;
+        code <<= 5;
         crc ^= code;
-        code = (code << 7) & 0xffff;
+        code <<= 7;
         crc ^= code;
     }
     crc

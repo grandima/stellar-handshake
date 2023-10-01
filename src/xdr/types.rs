@@ -1,6 +1,6 @@
-use std::fs::read;
-use crate::xdr::compound_types::LimitedLengthedArray;
-use crate::xdr::messages::{Auth, Hello};
+
+use crate::xdr::lengthed_array::LengthedArray;
+
 use crate::xdr::streams::{DecodeError, ReadStream, WriteStream};
 use crate::xdr::xdr_codec::XdrCodable;
 
@@ -26,8 +26,8 @@ impl <T: XdrCodable> XdrCodable for XdrSelfCoded<T> {
     }
 
     fn decode<R: AsRef<[u8]>>(read_stream: &mut ReadStream<R>) -> Result<Self, DecodeError> {
-        let mut length = read_stream.read_u32()? & 0x7f_ff_ff_ff;
-        let buff = read_stream.read_binary_data(length as usize)?;
+        let length = read_stream.read_u32()? & 0x7f_ff_ff_ff;
+        let buff = read_stream.read_bytes_array(length as usize)?;
         let mut new_read_stream = ReadStream::new(buff);
         Ok(Self(T::decode(&mut new_read_stream)?))
     }
@@ -55,14 +55,11 @@ impl XdrCodable for MessageType {
     }
 }
 #[derive(Debug, Clone)]
+#[derive(Default)]
 pub struct HmacSha256Mac {
     pub mac: Uint256,
 }
-impl Default for HmacSha256Mac {
-    fn default() -> Self {
-        Self {mac: [0; 32]}
-    }
-}
+
 impl XdrCodable for HmacSha256Mac {
     fn encode(&self, write_stream: &mut WriteStream) {
         self.mac.encode(write_stream);
@@ -137,4 +134,4 @@ pub type Uint64 = [u8; 8];
 pub type Uint256 = [u8; 32];
 pub type Uint512 = [u8; 64];
 pub type NodeId = PublicKey;
-pub type Signature = LimitedLengthedArray<64>;
+pub type Signature = LengthedArray;

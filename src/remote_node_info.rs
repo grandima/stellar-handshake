@@ -1,8 +1,8 @@
 use base64::Engine;
 
 use crate::node_config::NodeInfo;
-use crate::public_key::encode_stellar_key;
-use crate::xdr::constants::PUBLIC_KEY_VERSION_BYTE;
+
+
 use crate::xdr::messages::Hello;
 use crate::xdr::types::Uint256;
 
@@ -20,7 +20,7 @@ impl From<Hello> for RemoteNodeInfo {
         let remote_nonce = hello.nonce;
         let remote_public_key_ecdh = hello.cert.pubkey.key;
         let remote_pubkey = hello.peer_id.to_encoding();
-        let remote_pubkey_raw = hello.peer_id.as_binary().clone();
+        let remote_pubkey_raw = *hello.peer_id.as_binary();
 
         let node_info = NodeInfo {
             network_id: Some(base64::prelude::BASE64_STANDARD.encode(hello.peer_id.as_binary())),

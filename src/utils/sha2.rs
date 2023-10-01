@@ -1,5 +1,5 @@
-use ring::{digest, hmac};
-use std::convert::TryInto;
+use ring::{hmac};
+
 use ring::digest::{Context, SHA256};
 use crate::xdr::types::Uint256;
 
@@ -14,6 +14,6 @@ pub fn create_sha256(data: &[u8]) -> Uint256 {
     let digest = context.finish();
     digest.as_ref().to_vec();
     let mut res = [0u8; 32];
-    res.copy_from_slice(&digest.as_ref().to_vec());
+    res.copy_from_slice(digest.as_ref());
     res
 }

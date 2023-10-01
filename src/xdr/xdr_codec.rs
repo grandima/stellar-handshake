@@ -11,7 +11,7 @@ impl<const N: usize> XdrCodable for [u8; N] {
     }
 
     fn decode<T: AsRef<[u8]>>(read_stream: &mut ReadStream<T>) -> Result<Self, DecodeError> {
-        let value = read_stream.read_binary_data(N)?;
+        let value = read_stream.read_bytes_array(N)?;
         value.try_into().map_err(|_| unreachable!())
     }
 }

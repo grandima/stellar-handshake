@@ -1,24 +1,23 @@
 use std::collections::HashMap;
-use std::fmt::format;
+
 use crate::keypair::*;
 //use dryoc::rng::randombytes_buf;
 use dryoc::classic::crypto_core::crypto_scalarmult_base;
 use crate::xdr::auth_cert::{AuthCert, Curve25519Public};
 use std::time::{SystemTime, UNIX_EPOCH};
 use dryoc::classic::crypto_sign::crypto_sign_verify_detached;
-use dryoc::rng::{copy_randombytes, randombytes_buf};
-use rand::random;
+use dryoc::rng::{copy_randombytes};
+
 use crate::utils::misc::system_time_to_u64_millis;
 use crate::utils::sha2::{create_sha256, create_sha256_hmac};
-use crate::xdr::constants::{PUBLIC_KEY_LENGTH, ED25519_SECRET_KEY_BYTE_LENGTH, SEED_LENGTH, SHA256_LENGTH};
+use crate::xdr::constants::{PUBLIC_KEY_LENGTH, SEED_LENGTH, SHA256_LENGTH};
 use crate::xdr::streams::WriteStream;
 use crate::xdr::types::{EnvelopeType, Signature, Uint256};
 use crate::xdr::xdr_codec::XdrCodable;
 
 
 pub enum MacKeyType {
-    Sending,
-    Receiving
+    Sending
 }
 
 #[derive(Debug)]
@@ -57,7 +56,7 @@ impl ConnectionAuthentication {
                               cert: &AuthCert
     ) -> bool {
         let expiration = cert.expiration;
-        let time = system_time_to_u64_millis(&date);
+        let time = system_time_to_u64_millis(date);
         if expiration < (time / 1000) {
             return false
         }
@@ -89,12 +88,6 @@ impl ConnectionAuthentication {
                 buff.extend_from_slice(remote_nonce.as_ref());
                 buff.push(1);
             }
-            MacKeyType::Receiving => {
-                buff.push(1);
-                buff.extend_from_slice(remote_nonce.as_ref());
-                buff.extend_from_slice(local_nonce.as_ref());
-                buff.push(1);
-            }
         };
         let shared_key = self.shared_key(remote_public_key_ecdh);
         create_sha256_hmac(&buff, &shared_key)
@@ -111,26 +104,26 @@ impl ConnectionAuthentication {
         result_buf.extend_from_slice(remote_public_key_ecdh.as_ref());
         let zero_salt = [0u8; SHA256_LENGTH];
         result_buf = create_sha256_hmac(&result_buf, &zero_salt);
-        self.called_remote_keys.insert(remote_public_key_ecdh.clone(), result_buf.clone());
+        self.called_remote_keys.insert(*remote_public_key_ecdh, result_buf.clone());
         result_buf
     }
 
     //TODO think how to return a reference to authcert
-    pub fn get_auth_cert(&mut self, validAt: SystemTime) -> AuthCert {
-        let next_expiration = system_time_to_u64_millis(&validAt);
+    pub fn get_auth_cert(&mut self, valid_at: SystemTime) -> AuthCert {
+        let next_expiration = system_time_to_u64_millis(&valid_at);
 
         let cert = match self.auth_cert.take() {
             Some(cert) if self.auth_cert_expiration >= next_expiration => cert,
             _ => {
-                self.create_auth_cert(validAt)
+                self.create_auth_cert(valid_at)
             },
         };
         self.auth_cert = Some(cert.clone());
         cert
     }
 
-    fn create_auth_cert(&mut self, validAt: SystemTime) -> AuthCert {
-        let timestamp_with_expiration: u64 = validAt
+    fn create_auth_cert(&mut self, valid_at: SystemTime) -> AuthCert {
+        let timestamp_with_expiration: u64 = valid_at
             .duration_since(UNIX_EPOCH)
             .map(|x|x.as_millis())
             .unwrap()
@@ -152,7 +145,7 @@ impl ConnectionAuthentication {
         signature_data.extend(self.public_key_ecdh.key.iter());
         let hashed_signature_data = create_sha256(&signature_data);
         let signed = self.keychain.sign(hashed_signature_data);
-        let sig = Signature::new(signed.to_vec()).unwrap();
+        let sig = Signature::new(signed.to_vec());
         AuthCert {
             pubkey: self.public_key_ecdh.clone(),
             expiration: self.auth_cert_expiration,

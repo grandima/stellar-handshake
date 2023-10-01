@@ -34,7 +34,7 @@ impl<T: AsRef<[u8]>> ReadStream<T> {
         ReadStream { read_index: 0, source }
     }
 
-    fn generate_sudden_end_error(&self, no_of_bytes_to_read: usize) -> DecodeError {
+    fn sudden_end_error(&self, no_of_bytes_to_read: usize) -> DecodeError {
         DecodeError::SuddenEnd {
             actual_length: self.source.as_ref().len(),
             expected_length: no_of_bytes_to_read + self.read_index,
@@ -42,34 +42,34 @@ impl<T: AsRef<[u8]>> ReadStream<T> {
     }
     fn ensure_size(&self, no_of_bytes_to_read: usize) -> Result<(), DecodeError> {
         if no_of_bytes_to_read + self.read_index > self.source.as_ref().len() {
-            return Err(self.generate_sudden_end_error(no_of_bytes_to_read))
+            return Err(self.sudden_end_error(no_of_bytes_to_read))
         }
         Ok(())
     }
 
-    pub fn read_binary_data(&mut self, no_of_bytes: usize) -> Result<Vec<u8>, DecodeError> {
+    pub fn read_bytes_array(&mut self, no_of_bytes: usize) -> Result<Vec<u8>, DecodeError> {
         self.ensure_size(extend_to_multiple_of_4(no_of_bytes))?;
         let result = self.source.as_ref()[self.read_index..self.read_index + no_of_bytes].to_vec();
         self.read_index += extend_to_multiple_of_4(no_of_bytes);
         Ok(result)
     }
     pub fn read_u32(&mut self) -> Result<u32, DecodeError> {
-        let array: &[u8; 4] = self.read_byte_array()?;
+        let array: &[u8; 4] = self.read_limited_bytes_array()?;
         Ok(u32::from_be_bytes(*array))
     }
     pub fn read_u64(&mut self) -> Result<u64, DecodeError> {
-        let array: &[u8; 8] = self.read_byte_array()?;
+        let array: &[u8; 8] = self.read_limited_bytes_array()?;
         Ok(u64::from_be_bytes(*array))
     }
 
-    fn read_byte_array<const N: usize>(&mut self) -> Result<&[u8; N], DecodeError> {
+    fn read_limited_bytes_array<const N: usize>(&mut self) -> Result<&[u8; N], DecodeError> {
         let array: Result<&[u8; N], _> = (self.source.as_ref()[self.read_index..self.read_index + N]).try_into();
         match array {
             Ok(array) => {
                 self.read_index += N;
                 Ok(array)
             },
-            Err(_) => Err(self.generate_sudden_end_error(N)),
+            Err(_) => Err(self.sudden_end_error(N)),
         }
     }
     pub fn get_position(&self) -> usize {
@@ -80,24 +80,12 @@ impl<T: AsRef<[u8]>> ReadStream<T> {
 fn extend_to_multiple_of_4(value: usize) -> usize {
     (value + 3) & !3
 }
-#[derive(Debug)]
-pub enum EncodeError {
-    ExceedsMaximumLength {
-        requested_length: usize,
-        allowed_length: i32,
-    },
-}
+
 #[derive(Debug)]
 pub enum DecodeError {
     SuddenEnd {
         actual_length: usize,
         expected_length: usize,
-    },
-
-    ArrayExceedsMaxLength {
-        at_position: usize,
-        max_length: i32,
-        actual_length: i32,
     },
 
     InvalidEnumDiscriminator {

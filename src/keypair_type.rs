@@ -6,8 +6,8 @@ impl From<String> for KeypairType {
     }
 }
 
-impl Into<String> for KeypairType {
-    fn into(self) -> String {
-        self.0
+impl From<KeypairType> for String {
+    fn from(val: KeypairType) -> Self {
+        val.0
     }
 }

@@ -1,19 +1,17 @@
-use std::collections::HashMap;
+
 use std::time::SystemTime;
-use rand::random;
+
 use crate::connection_authentication::{ConnectionAuthentication, MacKeyType};
 use crate::remote_node_info::RemoteNodeInfo;
 use crate::utils::misc::{generate_nonce};
 use crate::utils::sha2::{create_sha256_hmac};
-use crate::xdr::auth_cert::AuthCert;
+
 use crate::xdr::constants::SHA256_LENGTH;
 use crate::xdr::messages::{Auth, AuthenticatedMessage, AuthenticatedMessageV0, Hello, StellarMessage};
 use crate::xdr::streams::WriteStream;
 use crate::xdr::types::{XdrSelfCoded, HmacSha256Mac, Uint256, Uint64};
 use crate::xdr::xdr_codec::XdrCodable;
 
-//TODO: do i need this?
-const SHA_LENGTH: u32 = 32;
 
 pub struct Connection {
     pub authentication: ConnectionAuthentication,
@@ -35,8 +33,8 @@ impl Connection {
     pub fn auth_message(&mut self) -> XdrSelfCoded<AuthenticatedMessage> {
         let message = StellarMessage::Auth(Auth{flags: 100});
         let mac = self.mac_for_authenticated_message(&message);
-        let messageV0 = XdrSelfCoded::new(AuthenticatedMessage::V0(AuthenticatedMessageV0{message: message.clone(), sequence: self.local_sequence, mac}));
-        messageV0
+        
+        XdrSelfCoded::new(AuthenticatedMessage::V0(AuthenticatedMessageV0{message: message.clone(), sequence: self.local_sequence, mac}))
     }
 
     fn mac_for_authenticated_message(&self, message: &StellarMessage) -> HmacSha256Mac {

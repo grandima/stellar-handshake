@@ -1,6 +1,6 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 use rand::random;
-use crate::utils::sha2::{create_sha256, create_sha256_hmac};
+use crate::utils::sha2::{create_sha256};
 use crate::xdr::types::Uint256;
 
 pub fn generate_nonce() -> Uint256 {
