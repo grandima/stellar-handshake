@@ -40,16 +40,16 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let keypair = Keychain::gen();
     let node_config = NodeConfig::default();
     let mut connection = Connection::new(ConnectionAuthentication::new(keypair, node_config.network));
-    let hello = Hello{
+    let hello = Hello {
         ledger_version: node_config.node_info.ledger_version,
         overlay_version: node_config.node_info.overlay_version,
         overlay_min_version: node_config.node_info.overlay_min_version,
-        network_id: connection.authentication.network_id,
+        network_id: connection.authentication.network_id(),
         version_str: node_config.node_info.version_string,
         listening_port: node_config.listening_port,
         peer_id: NodeId::PublicKeyTypeEd25519(*connection.authentication.keychain().public_key()),
-        cert: connection.authentication.get_auth_cert(SystemTime::now()).clone(),
-        nonce: connection.local_nonce
+        cert: connection.authentication.auth_cert(SystemTime::now()).clone(),
+        nonce: connection.local_nonce,
     };
     let authenticated_message = AuthenticatedMessageV0{message: StellarMessage::Hello(hello), mac: HmacSha256Mac::default(), sequence:[0; 8]};
     let versionized_message = AuthenticatedMessage::V0(authenticated_message);
@@ -75,7 +75,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             StellarMessage::Auth(_) => {panic!()}
         };
         connection.process_hello(message);
-        let auth_message = connection.auth_message();
+        let auth_message = connection.create_auth_message();
         let mut  writer = WriteStream::new();
         auth_message.encode(&mut writer);
         let result = writer.result();

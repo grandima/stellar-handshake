@@ -20,11 +20,16 @@ pub enum MacKeyType {
     Sending
 }
 
+struct CalledRemoteKeypair {
+    key: Uint256,
+    value: Vec<u8>
+}
+
 #[derive(Debug)]
 pub struct ConnectionAuthentication {
-    pub called_remote_keys: HashMap<Uint256, Vec<u8>>,
+    called_remote_keys: HashMap<Uint256, Vec<u8>>,
     keychain: Keychain,
-    pub network_id: Uint256,
+    network_id: Uint256,
     pub secret_key_ecdh: [u8; SEED_LENGTH],
     pub public_key_ecdh: Curve25519Public,
     auth_cert: Option<AuthCert>,
@@ -34,8 +39,7 @@ pub struct ConnectionAuthentication {
 impl ConnectionAuthentication {
     const  AUTH_EXPIRATION_LIMIT: u64 = 360000; //60 minutes
     pub fn new(keypair: Keychain, network_id: impl AsRef<[u8]>) -> Self {
-        let mut hashed_network_id = [0u8; 32];
-        hashed_network_id.copy_from_slice(&create_sha256(network_id.as_ref()));
+        let mut hashed_network_id = create_sha256(network_id.as_ref());
         let mut secret_key_ecdh = [0u8; SEED_LENGTH];
         copy_randombytes(&mut secret_key_ecdh);
         let mut public_key_ecdh = [0u8; PUBLIC_KEY_LENGTH];
@@ -109,7 +113,7 @@ impl ConnectionAuthentication {
     }
 
     //TODO think how to return a reference to authcert
-    pub fn get_auth_cert(&mut self, valid_at: SystemTime) -> AuthCert {
+    pub fn auth_cert(&mut self, valid_at: SystemTime) -> AuthCert {
         let next_expiration = system_time_to_u64_millis(&valid_at);
 
         let cert = match self.auth_cert.take() {
@@ -154,5 +158,8 @@ impl ConnectionAuthentication {
     }
     pub fn keychain(&self) -> &Keychain {
         &self.keychain
+    }
+    pub fn network_id(&self) -> Uint256 {
+        self.network_id
     }
 }

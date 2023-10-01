@@ -30,7 +30,7 @@ impl Connection {
             local_sequence: [0u8; 8]
         }
     }
-    pub fn auth_message(&mut self) -> XdrSelfCoded<AuthenticatedMessage> {
+    pub fn create_auth_message(&mut self) -> XdrSelfCoded<AuthenticatedMessage> {
         let message = StellarMessage::Auth(Auth{flags: 100});
         let mac = self.mac_for_authenticated_message(&message);
         
@@ -55,8 +55,9 @@ impl Connection {
     }
 
     pub fn process_hello(&mut self, hello: Hello) {
-        let result = self.authentication.verify_remote_cert(&SystemTime::now(), hello.peer_id.as_binary(), &hello.cert);
-        println!("{}", result);
+        if !self.authentication.verify_remote_cert(&SystemTime::now(), hello.peer_id.as_binary(), &hello.cert) {
+            panic!()
+        }
         let node_info = RemoteNodeInfo::from(hello);
         self.sending_mac_key = Some(self.authentication.mac_key(
             MacKeyType::Sending,

@@ -13,7 +13,7 @@ impl Default for NodeInfo {
             overlay_version: 29,
             overlay_min_version: 17,
             version_string: "v19.13.0".try_into().unwrap(),
-            network_id: Some("Test SDF Network ; September 2015".to_string()),
+            network_id: "Test SDF Network ; September 2015".to_string(),
         }
     }
 }
@@ -33,5 +33,5 @@ pub struct NodeInfo {
     pub overlay_version: u32,
     pub overlay_min_version: u32,
     pub version_string: LengthedArray,
-    pub network_id: Option<String>,
+    pub network_id: String,
 }
