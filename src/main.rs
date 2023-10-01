@@ -15,10 +15,10 @@ use node_config::NodeConfig;
 use connection_authentication::*;
 use crate::connection::Connection;
 use crate::xdr::constants::SEED_LENGTH;
-use crate::xdr::compound_types::{LimitedVarOpaque};
+use crate::xdr::compound_types::{LimitedLengthedArray};
 use crate::xdr::messages::{AuthenticatedMessage, AuthenticatedMessageV0, Hello, StellarMessage};
 use crate::xdr::streams::{ReadStream, WriteStream};
-use crate::xdr::types::{XdrCoded,  HmacSha256Mac, NodeId};
+use crate::xdr::types::{XdrSelfCoded, HmacSha256Mac, NodeId};
 use crate::xdr::xdr_codec::XdrCodable;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
@@ -55,19 +55,19 @@ async fn main() -> Result<(), Box<dyn Error>> {
     };
     let authenticated_message = AuthenticatedMessageV0{message: StellarMessage::Hello(hello), mac: HmacSha256Mac::default(), sequence:[0; 8]};
     let versionized_message = AuthenticatedMessage::V0(authenticated_message);
-    let archived_message = XdrCoded::new(versionized_message);
+    let archived_message = XdrSelfCoded::new(versionized_message);
     let mut  writer = WriteStream::new();
     archived_message.encode(&mut writer);
     let mut stream = tokio::net::TcpStream::connect("127.0.0.1:11601").await.unwrap();
-    let result = stream.write(&writer.get_result()).await.unwrap();
-    let mut buffer: Vec<u8> = Vec::with_capacity(400);
+    let result = stream.write(&writer.result()).await.unwrap();
+    let mut buffer: Vec<u8> = Vec::with_capacity(0x40000);
     loop {
-        let read_size = stream.read_exact(&mut buffer).await.unwrap();
+        let read_size = stream.read_buf(&mut buffer).await.unwrap();
         if read_size == 0 {
             return Ok(());
         }
         let mut read_stream = ReadStream::new(buffer.clone());
-        let message = XdrCoded::<AuthenticatedMessage>::decode(&mut read_stream).unwrap().value().clone();
+        let message = XdrSelfCoded::<AuthenticatedMessage>::decode(&mut read_stream).unwrap().value().clone();
         let message = match match message {
             AuthenticatedMessage::V0(message) => message
         }.message {
@@ -80,12 +80,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
         let auth_message = connection.auth_message();
         let mut  writer = WriteStream::new();
         auth_message.encode(&mut writer);
-        let result = writer.get_result();
+        let result = writer.result();
         let result = stream.write(&result).await.unwrap();
         buffer.clear();
         let read_result = stream.read_buf(&mut buffer).await.unwrap();
         let mut read_stream = ReadStream::new(buffer.clone());
-        let message = XdrCoded::<AuthenticatedMessage>::decode(&mut read_stream).unwrap().value();
+        let message = XdrSelfCoded::<AuthenticatedMessage>::decode(&mut read_stream).unwrap().value();
 
         break;
     }

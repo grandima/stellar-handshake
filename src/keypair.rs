@@ -2,8 +2,8 @@ use data_encoding::BASE32;
 use dryoc::classic::crypto_sign::crypto_sign_detached;
 use dryoc::dryocbox::ByteArray;
 use dryoc::sign::{SecretKey, SigningKeyPair};
+use crate::xdr::auth_cert::Curve25519Secret;
 use crate::xdr::constants::{PUBLIC_KEY_LENGTH, ED25519_SECRET_KEY_BYTE_LENGTH, SEED_LENGTH};
-use crate::xdr::curve25519_secret::Curve25519Secret;
 use crate::xdr::types::{PublicKey, Uint256, Uint512};
 #[derive(Debug, Clone)]
 pub struct Keychain {

@@ -1,4 +1,4 @@
-use crate::xdr::compound_types::LimitedVarOpaque;
+use crate::xdr::compound_types::LimitedLengthedArray;
 
 #[derive(Debug)]
 pub struct NodeConfig {
@@ -35,6 +35,6 @@ pub struct NodeInfo {
     pub ledger_version: u32,
     pub overlay_version: u32,
     pub overlay_min_version: u32,
-    pub version_string: LimitedVarOpaque<100>,
+    pub version_string: LimitedLengthedArray<100>,
     pub network_id: Option<String>,
 }

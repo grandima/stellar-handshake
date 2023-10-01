@@ -20,7 +20,7 @@ impl WriteStream {
     pub fn write_u64(&mut self, value: u64) {
         self.result.extend(value.to_be_bytes().iter());
     }
-    pub fn get_result(self) -> Vec<u8> {
+    pub fn result(self) -> Vec<u8> {
         self.result
     }
 }
@@ -89,44 +89,18 @@ pub enum EncodeError {
 }
 #[derive(Debug)]
 pub enum DecodeError {
-    /// The XDR data ends too early.
-    ///
-    /// The decoder expects more bytes to decode the data successfully
-    /// The actual length and the expected length are given by `actual_length` and
-    /// `expected_length`
     SuddenEnd {
         actual_length: usize,
         expected_length: usize,
     },
 
-    /// There binary data is longer than expected
-    ///
-    /// The XDR is self delimiting and would end earlier than the length of the provided
-    /// binary data. The number of remaining bytes is given by `remaining_no_of_bytes`
-    TypeEndsTooEarly {
-        remaining_no_of_bytes: isize,
-    },
-
-    /// The XDR contains a "Var Opaque" whose length exceeds the specified maximal length
-    VarOpaqueExceedsMaxLength {
+    ArrayExceedsMaxLength {
         at_position: usize,
         max_length: i32,
         actual_length: i32,
     },
 
-
-    /// The XDR contains an enum with an invalid discriminator
-    ///
-    /// The discriminator does not have one of the allowed values
     InvalidEnumDiscriminator {
-        at_position: usize,
-    },
-
-    /// The base64 encoding of the binary XDR is invalid
-    InvalidBase64,
-
-    // there is an invalid length encoding in an XDR stream
-    InvalidXdrArchiveLength {
         at_position: usize,
     },
 }

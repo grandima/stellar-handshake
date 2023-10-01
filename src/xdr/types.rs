@@ -1,13 +1,13 @@
 use std::fs::read;
-use crate::xdr::compound_types::LimitedVarOpaque;
+use crate::xdr::compound_types::LimitedLengthedArray;
 use crate::xdr::messages::{Auth, Hello};
 use crate::xdr::streams::{DecodeError, ReadStream, WriteStream};
 use crate::xdr::xdr_codec::XdrCodable;
 
 #[derive(Debug)]
-pub struct XdrCoded<T: XdrCodable> (T);
+pub struct XdrSelfCoded<T: XdrCodable> (T);
 
-impl<T: XdrCodable> XdrCoded<T> {
+impl<T: XdrCodable> XdrSelfCoded<T> {
     pub fn new(value: T) -> Self {
         Self (value)
     }
@@ -16,18 +16,17 @@ impl<T: XdrCodable> XdrCoded<T> {
     }
 }
 
-impl <T: XdrCodable> XdrCodable for XdrCoded<T> {
+impl <T: XdrCodable> XdrCodable for XdrSelfCoded<T> {
     fn encode(&self, write_stream: &mut WriteStream) {
         let mut internal_stream = WriteStream::new();
         self.0.encode(&mut internal_stream);
-        let res = internal_stream.get_result();
-        write_stream.write_u32(res.len() as u32);
+        let res = internal_stream.result();
+        write_stream.write_u32(res.len() as u32 | 0x80_00_00_00);
         write_stream.write_binary_data(&res);
     }
 
     fn decode<R: AsRef<[u8]>>(read_stream: &mut ReadStream<R>) -> Result<Self, DecodeError> {
-        let mut buffer = read_stream.read_binary_data(4)?;
-        let mut length = u32::from_be_bytes([buffer[0] & 0x7f, buffer[1], buffer[2], buffer[3]]);
+        let mut length = read_stream.read_u32()? & 0x7f_ff_ff_ff;
         let buff = read_stream.read_binary_data(length as usize)?;
         let mut new_read_stream = ReadStream::new(buff);
         Ok(Self(T::decode(&mut new_read_stream)?))
@@ -138,5 +137,4 @@ pub type Uint64 = [u8; 8];
 pub type Uint256 = [u8; 32];
 pub type Uint512 = [u8; 64];
 pub type NodeId = PublicKey;
-pub type Signature = LimitedVarOpaque<64>;
-
+pub type Signature = LimitedLengthedArray<64>;

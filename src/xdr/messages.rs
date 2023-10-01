@@ -1,5 +1,5 @@
 use crate::xdr::auth_cert::AuthCert;
-use crate::xdr::compound_types::LimitedVarOpaque;
+use crate::xdr::compound_types::LimitedLengthedArray;
 use crate::xdr::streams::{DecodeError, ReadStream, WriteStream};
 use crate::xdr::types::{HmacSha256Mac, MessageType, NodeId, Uint256, Uint64};
 use crate::xdr::xdr_codec::XdrCodable;
@@ -25,7 +25,7 @@ pub struct Hello {
     pub overlay_version: u32,
     pub overlay_min_version: u32,
     pub network_id: Uint256,
-    pub version_str: LimitedVarOpaque<100>,
+    pub version_str: LimitedLengthedArray<100>,
     pub listening_port: u32,
     pub peer_id: NodeId,
     pub cert: AuthCert,
@@ -50,7 +50,7 @@ impl XdrCodable for Hello {
         let overlay_version = u32::decode(read_stream)?;
         let overlay_min_version = u32::decode(read_stream)?;
         let network_id: Uint256 = XdrCodable::decode(read_stream)?;
-        let version_str = LimitedVarOpaque::<100>::decode(read_stream)?;
+        let version_str = LimitedLengthedArray::<100>::decode(read_stream)?;
         let listening_port =  u32::decode(read_stream)?;
         let peer_id = NodeId::decode(read_stream)?;
         Ok(Hello {
@@ -93,7 +93,7 @@ impl AuthenticatedMessage where Self: XdrCodable {
     pub fn compare(&self, vec: &[u8]) -> bool {
         let mut writer = WriteStream::new();
         self.encode(&mut writer);
-        writer.get_result() == vec
+        writer.result() == vec
     }
 }
 #[derive(Debug, Clone)]

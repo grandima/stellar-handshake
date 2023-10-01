@@ -3,7 +3,7 @@ use std::fmt::format;
 use crate::keypair::*;
 //use dryoc::rng::randombytes_buf;
 use dryoc::classic::crypto_core::crypto_scalarmult_base;
-use crate::xdr::auth_cert::AuthCert;
+use crate::xdr::auth_cert::{AuthCert, Curve25519Public};
 use std::time::{SystemTime, UNIX_EPOCH};
 use dryoc::classic::crypto_sign::crypto_sign_verify_detached;
 use dryoc::rng::{copy_randombytes, randombytes_buf};
@@ -11,7 +11,6 @@ use rand::random;
 use crate::utils::misc::system_time_to_u64_millis;
 use crate::utils::sha2::{create_sha256, create_sha256_hmac};
 use crate::xdr::constants::{PUBLIC_KEY_LENGTH, ED25519_SECRET_KEY_BYTE_LENGTH, SEED_LENGTH, SHA256_LENGTH};
-use crate::xdr::curve25519_public::Curve25519Public;
 use crate::xdr::streams::WriteStream;
 use crate::xdr::types::{EnvelopeType, Signature, Uint256};
 use crate::xdr::xdr_codec::XdrCodable;
@@ -28,7 +27,7 @@ pub struct ConnectionAuthentication {
     keychain: Keychain,
     pub network_id: Uint256,
     pub secret_key_ecdh: [u8; SEED_LENGTH],
-    pub public_key_ecdh: [u8; PUBLIC_KEY_LENGTH],
+    pub public_key_ecdh: Curve25519Public,
     auth_cert: Option<AuthCert>,
     auth_cert_expiration: u64,
 }
@@ -46,7 +45,7 @@ impl ConnectionAuthentication {
             called_remote_keys: Default::default(),
             keychain: keypair,
             network_id: hashed_network_id,
-            public_key_ecdh,
+            public_key_ecdh: Curve25519Public{key: public_key_ecdh},
             secret_key_ecdh,
             auth_cert: None,
             auth_cert_expiration: 0
@@ -65,14 +64,14 @@ impl ConnectionAuthentication {
         let mut writer = WriteStream::new();
         EnvelopeType::Auth.encode(&mut writer);
         cert.expiration.encode(&mut writer);
-        let envelope = writer.get_result();
+        let envelope = writer.result();
         let mut raw_sig_data = self.network_id.to_vec();
         raw_sig_data.extend(envelope.iter());
         raw_sig_data.extend_from_slice(&cert.pubkey.key);
         let hashed = create_sha256(&raw_sig_data);
 
         let mut sig = [0u8; 64];
-        sig.copy_from_slice(cert.sig.get_vec());
+        sig.copy_from_slice(cert.sig.vec());
         crypto_sign_verify_detached(&sig, remote_public_key, &hashed).is_err()
     }
 
@@ -108,7 +107,7 @@ impl ConnectionAuthentication {
         dryoc::classic::crypto_core::crypto_scalarmult(&mut buf, &self.secret_key_ecdh, remote_public_key_ecdh);
         let mut result_buf = vec![];
         result_buf.extend_from_slice(&buf);
-        result_buf.extend_from_slice(&self.public_key_ecdh);
+        result_buf.extend_from_slice(&self.public_key_ecdh.key);
         result_buf.extend_from_slice(remote_public_key_ecdh.as_ref());
         let zero_salt = [0u8; SHA256_LENGTH];
         result_buf = create_sha256_hmac(&result_buf, &zero_salt);
@@ -146,16 +145,16 @@ impl ConnectionAuthentication {
         let bytes_expiration = self.auth_cert_expiration.to_be_bytes();
         let mut writer = WriteStream::new();
         EnvelopeType::Auth.encode(&mut writer);
-        let xdr_envelope_type_result = writer.get_result();
+        let xdr_envelope_type_result = writer.result();
         let mut signature_data = self.network_id.clone().to_vec();
         signature_data.extend(xdr_envelope_type_result.iter());
         signature_data.extend(bytes_expiration.iter());
-        signature_data.extend(self.public_key_ecdh.iter());
+        signature_data.extend(self.public_key_ecdh.key.iter());
         let hashed_signature_data = create_sha256(&signature_data);
         let signed = self.keychain.sign(hashed_signature_data);
         let sig = Signature::new(signed.to_vec()).unwrap();
         AuthCert {
-            pubkey: Curve25519Public {key: self.public_key_ecdh},
+            pubkey: self.public_key_ecdh.clone(),
             expiration: self.auth_cert_expiration,
             sig
         }
