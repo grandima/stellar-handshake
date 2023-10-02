@@ -24,6 +24,8 @@ use std::error::Error;
 
 use std::time::{SystemTime};
 use data_encoding::BASE32;
+use dryoc::rng::copy_randombytes;
+use crate::utils::misc::generate_secret_key;
 
 
 #[tokio::main(flavor = "multi_thread", worker_threads = 2)]
@@ -37,27 +39,17 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let mut seed = [0u8; SEED_LENGTH];
     seed.copy_from_slice(data);
     // let keypair = Keychain::from(&seed);
-    let keypair = Keychain::gen();
+    let keypair = Keychain::from(&generate_secret_key());
     let node_config = NodeConfig::default();
-    let mut connection = Connection::new(ConnectionAuthentication::new(keypair, node_config.network));
-    let hello = Hello {
-        ledger_version: node_config.node_info.ledger_version,
-        overlay_version: node_config.node_info.overlay_version,
-        overlay_min_version: node_config.node_info.overlay_min_version,
-        network_id: connection.authentication.network_id(),
-        version_str: node_config.node_info.version_string,
-        listening_port: node_config.listening_port,
-        peer_id: NodeId::PublicKeyTypeEd25519(*connection.authentication.keychain().public_key()),
-        cert: connection.authentication.auth_cert(SystemTime::now()).clone(),
-        nonce: connection.local_nonce,
-    };
-    let authenticated_message = AuthenticatedMessageV0{message: StellarMessage::Hello(hello), mac: HmacSha256Mac::default(), sequence:[0; 8]};
-    let versionized_message = AuthenticatedMessage::V0(authenticated_message);
-    let archived_message = XdrSelfCoded::new(versionized_message);
-    let mut  writer = WriteStream::new();
-    archived_message.encode(&mut writer);
+    let mut secret_key_ecdh = [0u8; SEED_LENGTH];
+    copy_randombytes(&mut secret_key_ecdh);
+    let authentication = ConnectionAuthentication::new(keypair, &node_config.node_info.network_id, secret_key_ecdh);
+    let mut connection = Connection::new(node_config, authentication);
+
     let mut stream = tokio::net::TcpStream::connect("127.0.0.1:11601").await.unwrap();
-    let _result = stream.write(&writer.result()).await.unwrap();
+    let mut write_stream = WriteStream::default();
+    connection.create_hello_message().encode(&mut write_stream);
+    let _result = stream.write(&write_stream.result()).await.unwrap();
     let mut buffer: Vec<u8> = Vec::with_capacity(0x40000);
     loop {
         let read_size = stream.read_buf(&mut buffer).await.unwrap();
@@ -74,9 +66,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
             }
             StellarMessage::Auth(_) => {panic!()}
         };
-        connection.process_hello(message);
+        connection.process_hello(message, ||SystemTime::now());
         let auth_message = connection.create_auth_message();
-        let mut  writer = WriteStream::new();
+        let mut  writer = WriteStream::default();
         auth_message.encode(&mut writer);
         let result = writer.result();
         let _result = stream.write(&result).await.unwrap();
@@ -84,7 +76,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         let _read_result = stream.read_buf(&mut buffer).await.unwrap();
         let mut read_stream = ReadStream::new(buffer.clone());
         let _message = XdrSelfCoded::<AuthenticatedMessage>::decode(&mut read_stream).unwrap().value();
-
+        println!("auth received");
         break;
     }
     Ok(())

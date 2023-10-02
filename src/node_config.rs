@@ -2,7 +2,6 @@ use crate::xdr::lengthed_array::LengthedArray;
 
 #[derive(Debug)]
 pub struct NodeConfig {
-    pub network: String,
     pub node_info: NodeInfo,
     pub listening_port: u32,
 }
@@ -23,7 +22,6 @@ impl Default for NodeConfig {
         NodeConfig {
             node_info: NodeInfo::default(),
             listening_port: 11602,
-            network: "Test SDF Network ; September 2015".to_string(),
         }
     }
 }

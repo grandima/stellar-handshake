@@ -1,14 +1,15 @@
 use std::time::{SystemTime, UNIX_EPOCH};
-use rand::random;
+use dryoc::rng::{copy_randombytes, randombytes_buf};
 use crate::utils::sha2::{create_sha256};
 use crate::xdr::types::Uint256;
-
+use dryoc::dryocbox::ByteArray;
+pub fn generate_secret_key() -> Uint256 {
+    let keypair = dryoc::keypair::KeyPair::gen_with_defaults();
+    let secretkey = *keypair.secret_key.as_array();
+    secretkey
+}
 pub fn generate_nonce() -> Uint256 {
-    let nonce = random::<u32>().to_be_bytes();
-    //TODO: remove
-    // let nonce = [
-    //     48u8, 46, 53, 55, 55, 49, 53, 55, 48, 53, 51, 48, 53, 51, 55, 48, 50, 54, 48, 55, 50, 56
-    // ];
+    let nonce = randombytes_buf(4);
     let mut local_nonce = [0u8; 32];
     local_nonce.copy_from_slice(&create_sha256(&nonce));
     local_nonce

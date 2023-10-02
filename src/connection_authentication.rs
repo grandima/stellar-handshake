@@ -38,10 +38,8 @@ pub struct ConnectionAuthentication {
 
 impl ConnectionAuthentication {
     const  AUTH_EXPIRATION_LIMIT: u64 = 360000; //60 minutes
-    pub fn new(keypair: Keychain, network_id: impl AsRef<[u8]>) -> Self {
+    pub fn new(keypair: Keychain, network_id: impl AsRef<[u8]>, secret_key_ecdh: [u8; SEED_LENGTH]) -> Self {
         let mut hashed_network_id = create_sha256(network_id.as_ref());
-        let mut secret_key_ecdh = [0u8; SEED_LENGTH];
-        copy_randombytes(&mut secret_key_ecdh);
         let mut public_key_ecdh = [0u8; PUBLIC_KEY_LENGTH];
         crypto_scalarmult_base(&mut public_key_ecdh, &secret_key_ecdh);
         Self {
@@ -64,7 +62,7 @@ impl ConnectionAuthentication {
         if expiration < (time / 1000) {
             return false
         }
-        let mut writer = WriteStream::new();
+        let mut writer = WriteStream::default();
         EnvelopeType::Auth.encode(&mut writer);
         cert.expiration.encode(&mut writer);
         let envelope = writer.result();
@@ -74,7 +72,7 @@ impl ConnectionAuthentication {
         let hashed = create_sha256(&raw_sig_data);
 
         let mut sig = [0u8; 64];
-        sig.copy_from_slice(cert.sig.vec());
+        sig.copy_from_slice(&cert.sig);
         crypto_sign_verify_detached(&sig, remote_public_key, &hashed).is_err()
     }
 
@@ -140,7 +138,7 @@ impl ConnectionAuthentication {
         self.auth_cert_expiration = milisec + Self::AUTH_EXPIRATION_LIMIT;
         // self.auth_cert_expiration = 1695728543325 + Self::AUTH_EXPIRATION_LIMIT;
         let bytes_expiration = self.auth_cert_expiration.to_be_bytes();
-        let mut writer = WriteStream::new();
+        let mut writer = WriteStream::default();
         EnvelopeType::Auth.encode(&mut writer);
         let xdr_envelope_type_result = writer.result();
         let mut signature_data = self.network_id.clone().to_vec();

@@ -1,3 +1,4 @@
+use std::ops::Deref;
 use crate::xdr::streams::{DecodeError, ReadStream, WriteStream};
 use crate::xdr::xdr_codec::XdrCodable;
 #[derive(Debug, Clone)]
@@ -6,7 +7,11 @@ impl LengthedArray {
     pub fn new(vec: Vec<u8>) -> Self {
         LengthedArray(vec)
     }
-    pub fn vec(&self) -> &Vec<u8> {
+}
+
+impl Deref for LengthedArray {
+    type Target = [u8];
+    fn deref(&self) -> &[u8] {
         &self.0
     }
 }

@@ -11,11 +11,7 @@ pub struct Keychain {
 }
 
 impl Keychain {
-    pub fn gen() -> Self {
-        let keypair = dryoc::keypair::KeyPair::gen_with_defaults();
-        let secretkey = keypair.secret_key.as_array();
-        Keychain::from(secretkey)
-    }
+
     pub fn sign(&self, message: impl AsRef<[u8]>) -> Uint512 {
         let mut signature = [0u8; ED25519_SECRET_KEY_BYTE_LENGTH];
         let secret_key = self.signer_key;
