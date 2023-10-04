@@ -26,7 +26,6 @@ impl XdrCodable for u32 {
     fn encode(&self, write_stream: &mut WriteStream) {
         write_stream.write_u32(*self);
     }
-
     fn decode<T: AsRef<[u8]>>(read_stream: &mut ReadStream<T>) -> Result<Self, DecodeError> {
         read_stream.read_u32()
     }

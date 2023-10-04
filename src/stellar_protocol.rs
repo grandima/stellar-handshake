@@ -10,7 +10,7 @@ use crate::utils::sha2::{create_sha256_hmac};
 
 use crate::xdr::constants::SHA256_LENGTH;
 use crate::xdr::messages::{Auth, AuthenticatedMessage, AuthenticatedMessageV0, Hello, StellarMessage};
-use crate::xdr::streams::{ReadStream, WriteStream};
+use crate::xdr::streams::{DecodeError, ReadStream, WriteStream};
 use crate::xdr::types::{XdrSelfCoded, HmacSha256Mac, Uint256, Uint64, NodeId};
 use crate::xdr::xdr_codable::XdrCodable;
 
@@ -24,11 +24,16 @@ pub struct StellarProtocol<F: Fn() -> u64> {
     pub sending_mac_key: Option<Vec<u8>>,
     pub time_provider: F
 }
+use std::io;
 
 #[derive(Debug, Error)]
 #[error("Stellar error")]
 pub enum StellarError {
-    AuthenticationError(#[from] AuthenticationError)
+    AuthenticationError(#[from] AuthenticationError),
+    DecodeError(#[from] DecodeError),
+    #[error("IO error: {0}")]
+    GenericError(#[from] io::Error),
+    ConnectionResetByPeer
 }
 pub enum HandshakeMessageExtract {
     Hello(Result<RemoteNodeInfo, StellarError>),

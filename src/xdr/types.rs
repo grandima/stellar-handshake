@@ -7,6 +7,16 @@ use crate::xdr::xdr_codable::XdrCodable;
 #[derive(Debug)]
 pub struct XdrSelfCoded<T: XdrCodable> (pub T);
 
+impl <T> XdrSelfCoded<T> where T: XdrCodable {
+    pub(crate) fn has_complete_message(buf: &[u8]) -> Result<bool, DecodeError> {
+        if buf.len() < 4 {
+            return Ok(false);
+        }
+        let length = ReadStream::new(buf).read_length(true)?;
+        return Ok(length + 4 <= buf.len())
+    }
+}
+
 impl<T: XdrCodable> XdrSelfCoded<T> {
     pub fn new(value: T) -> Self {
         Self (value)
@@ -24,8 +34,8 @@ impl <T: XdrCodable> XdrCodable for XdrSelfCoded<T> {
     }
 
     fn decode<R: AsRef<[u8]>>(read_stream: &mut ReadStream<R>) -> Result<Self, DecodeError> {
-        let length = read_stream.read_u32()? & 0x7f_ff_ff_ff;
-        let buff = read_stream.read_bytes_array(length as usize)?;
+        let length = read_stream.read_length(false)?;
+        let buff = read_stream.read_bytes_array(length)?;
         let mut new_read_stream = ReadStream::new(buff);
         Ok(Self(T::decode(&mut new_read_stream)?))
     }

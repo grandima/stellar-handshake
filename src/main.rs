@@ -8,6 +8,7 @@ mod remote_node_info;
 mod public_key;
 mod utils;
 mod stellar;
+mod connection;
 
 use keypair::Keychain;
 use node_config::NodeConfig;

@@ -398,6 +398,7 @@ name = "stellar-handshake"
 version = "0.1.0"
 dependencies = [
  "base64",
+ "bytes",
  "data-encoding",
  "dryoc",
  "ring",

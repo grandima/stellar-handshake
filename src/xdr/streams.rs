@@ -1,4 +1,6 @@
 use std::iter;
+use thiserror::Error;
+
 #[derive(Default)]
 pub struct WriteStream {
     result: Vec<u8>,
@@ -54,19 +56,35 @@ impl<T: AsRef<[u8]>> ReadStream<T> {
         Ok(result)
     }
     pub fn read_u32(&mut self) -> Result<u32, DecodeError> {
-        let array: &[u8; 4] = self.read_limited_bytes_array()?;
+        let array: &[u8; 4] = self.read_limited_bytes_array(false)?;
         Ok(u32::from_be_bytes(*array))
     }
     pub fn read_u64(&mut self) -> Result<u64, DecodeError> {
-        let array: &[u8; 8] = self.read_limited_bytes_array()?;
+        let array: &[u8; 8] = self.read_limited_bytes_array(false)?;
         Ok(u64::from_be_bytes(*array))
     }
+    pub fn read_length(&mut self, only_peek: bool) -> Result<usize, DecodeError> {
+        let array: &[u8; 4] = self.read_limited_bytes_array(only_peek)?;
+        Ok(u32::from_be_bytes(*array) as usize)
+    }
 
-    fn read_limited_bytes_array<const N: usize>(&mut self) -> Result<&[u8; N], DecodeError> {
+    fn peek_limited_bytes_array<const N: usize>(&mut self) -> Result<&[u8; N], DecodeError> {
         let array: Result<&[u8; N], _> = (self.source.as_ref()[self.read_index..self.read_index + N]).try_into();
         match array {
             Ok(array) => {
-                self.read_index += N;
+                Ok(array)
+            },
+            Err(_) => Err(self.sudden_end_error(N)),
+        }
+    }
+
+    fn read_limited_bytes_array<const N: usize>(&mut self, only_peek: bool) -> Result<&[u8; N], DecodeError> {
+        let array: Result<&[u8; N], _> = (self.source.as_ref()[self.read_index..self.read_index + N]).try_into();
+        match array {
+            Ok(array) => {
+                if !only_peek {
+                    self.read_index += N;
+                }
                 Ok(array)
             },
             Err(_) => Err(self.sudden_end_error(N)),
@@ -81,7 +99,8 @@ fn extend_to_multiple_of_4(value: usize) -> usize {
     (value + 3) & !3
 }
 
-#[derive(Debug)]
+#[derive(Debug, Error)]
+#[error("Decode Error")]
 pub enum DecodeError {
     SuddenEnd {
         actual_length: usize,
