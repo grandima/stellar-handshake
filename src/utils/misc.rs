@@ -1,5 +1,5 @@
-use std::time::{SystemTime, UNIX_EPOCH};
-use dryoc::rng::{copy_randombytes, randombytes_buf};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use dryoc::rng::{randombytes_buf};
 use crate::utils::sha2::{create_sha256};
 use crate::xdr::types::Uint256;
 use dryoc::dryocbox::ByteArray;
@@ -15,10 +15,11 @@ pub fn generate_nonce() -> Uint256 {
     local_nonce
 }
 
-pub fn system_time_to_u64_millis(time: &SystemTime) -> u64 {
-    time.duration_since(UNIX_EPOCH)
-        .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)
-        .map(|duration_since_epoch| duration_since_epoch.as_millis())
-        .and_then(|millis_since_epoch| millis_since_epoch.try_into().map_err(|e| Box::new(e) as Box<dyn std::error::Error>))
-        .unwrap()
+pub fn current_u64_milliseconds() -> u64 {
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map(|duration|duration.as_millis())
+            .unwrap_or(0)
+            .try_into()
+            .unwrap_or(0)
 }

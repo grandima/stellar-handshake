@@ -2,7 +2,7 @@ use crate::xdr::auth_cert::AuthCert;
 use crate::xdr::lengthed_array::LengthedArray;
 use crate::xdr::streams::{DecodeError, ReadStream, WriteStream};
 use crate::xdr::types::{HmacSha256Mac, MessageType, NodeId, Uint256, Uint64};
-use crate::xdr::xdr_codec::XdrCodable;
+use crate::xdr::xdr_codable::XdrCodable;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Auth {
@@ -19,7 +19,7 @@ impl XdrCodable for Auth {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Hello {
     pub ledger_version: u32,
     pub overlay_version: u32,
@@ -66,7 +66,7 @@ impl XdrCodable for Hello {
         })
     }
 }
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub enum AuthenticatedMessage {
     V0(AuthenticatedMessageV0),
 }
@@ -88,7 +88,7 @@ impl XdrCodable for AuthenticatedMessage {
     }
 
 }
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct AuthenticatedMessageV0 {
     pub sequence: Uint64,
     pub message: StellarMessage,
@@ -110,7 +110,7 @@ impl XdrCodable for AuthenticatedMessageV0 {
         })
     }
 }
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub enum StellarMessage {
     Hello(Hello),
     Auth(Auth),

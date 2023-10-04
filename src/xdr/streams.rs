@@ -5,6 +5,9 @@ pub struct WriteStream {
 }
 
 impl WriteStream {
+    pub fn new() -> WriteStream {
+        WriteStream { result: Vec::with_capacity(128) }
+    }
     pub fn write_binary_data(&mut self, value: &[u8]) {
         self.result.extend_from_slice(value);
         let length = value.len();

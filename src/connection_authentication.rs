@@ -6,27 +6,32 @@ use dryoc::classic::crypto_core::crypto_scalarmult_base;
 use crate::xdr::auth_cert::{AuthCert, Curve25519Public};
 use std::time::{SystemTime, UNIX_EPOCH};
 use dryoc::classic::crypto_sign::crypto_sign_verify_detached;
-use dryoc::rng::{copy_randombytes};
+use thiserror::Error;
 
-use crate::utils::misc::system_time_to_u64_millis;
+
 use crate::utils::sha2::{create_sha256, create_sha256_hmac};
 use crate::xdr::constants::{PUBLIC_KEY_LENGTH, SEED_LENGTH, SHA256_LENGTH};
 use crate::xdr::streams::WriteStream;
 use crate::xdr::types::{EnvelopeType, Signature, Uint256};
-use crate::xdr::xdr_codec::XdrCodable;
+use crate::xdr::xdr_codable::XdrCodable;
 
 
+//TODO remove
 pub enum MacKeyType {
     Sending
 }
 
-struct CalledRemoteKeypair {
-    key: Uint256,
-    value: Vec<u8>
+#[derive(Error, Debug)]
+pub enum AuthenticationError {
+    #[error("Cert expired")]
+    VerificationCertExpired,
+    #[error("Signature not verified")]
+    VerificationSignature
 }
 
 #[derive(Debug)]
 pub struct ConnectionAuthentication {
+    //TODO REMOVE
     called_remote_keys: HashMap<Uint256, Vec<u8>>,
     keychain: Keychain,
     network_id: Uint256,
@@ -39,7 +44,7 @@ pub struct ConnectionAuthentication {
 impl ConnectionAuthentication {
     const  AUTH_EXPIRATION_LIMIT: u64 = 360000; //60 minutes
     pub fn new(keypair: Keychain, network_id: impl AsRef<[u8]>, secret_key_ecdh: [u8; SEED_LENGTH]) -> Self {
-        let mut hashed_network_id = create_sha256(network_id.as_ref());
+        let hashed_network_id = create_sha256(network_id.as_ref());
         let mut public_key_ecdh = [0u8; PUBLIC_KEY_LENGTH];
         crypto_scalarmult_base(&mut public_key_ecdh, &secret_key_ecdh);
         Self {
@@ -53,14 +58,13 @@ impl ConnectionAuthentication {
         }
     }
     pub fn verify_remote_cert(&self,
-                              date: &SystemTime,
+                              time: u64,
                               remote_public_key: &Uint256,
                               cert: &AuthCert
-    ) -> bool {
+    ) -> Result<(),AuthenticationError> {
         let expiration = cert.expiration;
-        let time = system_time_to_u64_millis(date);
         if expiration < (time / 1000) {
-            return false
+            return Err(AuthenticationError::VerificationCertExpired)
         }
         let mut writer = WriteStream::default();
         EnvelopeType::Auth.encode(&mut writer);
@@ -73,7 +77,11 @@ impl ConnectionAuthentication {
 
         let mut sig = [0u8; 64];
         sig.copy_from_slice(&cert.sig);
-        crypto_sign_verify_detached(&sig, remote_public_key, &hashed).is_err()
+        if crypto_sign_verify_detached(&sig, remote_public_key, &hashed).is_err() {
+            Ok(())
+        } else {
+            Err(AuthenticationError::VerificationSignature)
+        }
     }
 
     pub fn mac_key(&mut self,
@@ -100,47 +108,30 @@ impl ConnectionAuthentication {
         }
         let mut buf = [0u8; dryoc::constants::CRYPTO_SCALARMULT_BYTES];
         dryoc::classic::crypto_core::crypto_scalarmult(&mut buf, &self.secret_key_ecdh, remote_public_key_ecdh);
-        let mut result_buf = vec![];
-        result_buf.extend_from_slice(&buf);
-        result_buf.extend_from_slice(&self.public_key_ecdh.key);
-        result_buf.extend_from_slice(remote_public_key_ecdh.as_ref());
+        let mut message_to_sign = [0u8; 96];
+        message_to_sign[..32].copy_from_slice(&buf);
+        message_to_sign[32..64].copy_from_slice(&self.public_key_ecdh.key);
+        message_to_sign[64..].copy_from_slice(remote_public_key_ecdh);
         let zero_salt = [0u8; SHA256_LENGTH];
-        result_buf = create_sha256_hmac(&result_buf, &zero_salt);
+        let result_buf = create_sha256_hmac(&message_to_sign, &zero_salt);
         self.called_remote_keys.insert(*remote_public_key_ecdh, result_buf.clone());
         result_buf
     }
 
-    //TODO think how to return a reference to authcert
-    pub fn auth_cert(&mut self, valid_at: SystemTime) -> AuthCert {
-        let next_expiration = system_time_to_u64_millis(&valid_at);
-
+    pub fn auth_cert(&mut self, milisec: u64) -> &AuthCert {
         let cert = match self.auth_cert.take() {
-            Some(cert) if self.auth_cert_expiration >= next_expiration => cert,
+            Some(cert) if self.auth_cert_expiration >= milisec => cert,
             _ => {
-                self.create_auth_cert(valid_at)
+                self.create_auth_cert_from_milisec(milisec)
             },
         };
-        self.auth_cert = Some(cert.clone());
-        cert
+        self.auth_cert = Some(cert);
+        self.auth_cert.as_ref().unwrap()
     }
-
-    fn create_auth_cert(&mut self, valid_at: SystemTime) -> AuthCert {
-        let timestamp_with_expiration: u64 = valid_at
-            .duration_since(UNIX_EPOCH)
-            .map(|x|x.as_millis())
-            .unwrap()
-            .try_into()
-            .unwrap();
-        self.create_auth_cert_from_milisec(timestamp_with_expiration)
-    }
-
     fn create_auth_cert_from_milisec(&mut self, milisec: u64) -> AuthCert {
         self.auth_cert_expiration = milisec + Self::AUTH_EXPIRATION_LIMIT;
-        // self.auth_cert_expiration = 1695728543325 + Self::AUTH_EXPIRATION_LIMIT;
         let bytes_expiration = self.auth_cert_expiration.to_be_bytes();
-        let mut writer = WriteStream::default();
-        EnvelopeType::Auth.encode(&mut writer);
-        let xdr_envelope_type_result = writer.result();
+        let xdr_envelope_type_result = EnvelopeType::Auth.encoded();
         let mut signature_data = self.network_id.clone().to_vec();
         signature_data.extend(xdr_envelope_type_result.iter());
         signature_data.extend(bytes_expiration.iter());

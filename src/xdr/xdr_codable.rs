@@ -3,6 +3,12 @@ use super::streams::{DecodeError, ReadStream, WriteStream};
 pub trait XdrCodable: Sized {
     fn encode(&self, write_stream: &mut WriteStream);
     fn decode<T: AsRef<[u8]>>(read_stream: &mut ReadStream<T>) -> Result<Self, DecodeError>;
+
+    fn encoded(&self) -> Vec<u8> {
+        let mut write_stream = WriteStream::new();
+        self.encode(&mut write_stream);
+        write_stream.result()
+    }
 }
 
 impl<const N: usize> XdrCodable for [u8; N] {

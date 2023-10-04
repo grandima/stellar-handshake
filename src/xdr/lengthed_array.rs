@@ -1,6 +1,6 @@
 use std::ops::Deref;
 use crate::xdr::streams::{DecodeError, ReadStream, WriteStream};
-use crate::xdr::xdr_codec::XdrCodable;
+use crate::xdr::xdr_codable::XdrCodable;
 #[derive(Debug, Clone)]
 pub struct LengthedArray(Vec<u8>);
 impl LengthedArray {

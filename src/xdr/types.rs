@@ -2,7 +2,7 @@
 use crate::xdr::lengthed_array::LengthedArray;
 
 use crate::xdr::streams::{DecodeError, ReadStream, WriteStream};
-use crate::xdr::xdr_codec::XdrCodable;
+use crate::xdr::xdr_codable::XdrCodable;
 
 #[derive(Debug)]
 pub struct XdrSelfCoded<T: XdrCodable> (pub T);
@@ -18,9 +18,7 @@ impl<T: XdrCodable> XdrSelfCoded<T> {
 
 impl <T: XdrCodable> XdrCodable for XdrSelfCoded<T> {
     fn encode(&self, write_stream: &mut WriteStream) {
-        let mut internal_stream = WriteStream::default();
-        self.0.encode(&mut internal_stream);
-        let res = internal_stream.result();
+        let res = self.0.encoded();
         write_stream.write_u32(res.len() as u32 | 0x80_00_00_00);
         write_stream.write_binary_data(&res);
     }
