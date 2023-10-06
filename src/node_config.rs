@@ -5,17 +5,6 @@ pub struct NodeConfig {
     pub node_info: NodeInfo,
     pub listening_port: u32,
 }
-impl Default for NodeInfo {
-    fn default() -> Self {
-        Self {
-            ledger_version: 17,
-            overlay_version: 29,
-            overlay_min_version: 17,
-            version_string: "v19.13.0".try_into().unwrap(),
-            network_id: "Test SDF Network ; September 2015".to_string(),
-        }
-    }
-}
 
 impl Default for NodeConfig {
     fn default() -> Self {
@@ -32,4 +21,15 @@ pub struct NodeInfo {
     pub overlay_min_version: u32,
     pub version_string: LengthedArray,
     pub network_id: String,
+}
+impl Default for NodeInfo {
+    fn default() -> Self {
+        Self {
+            ledger_version: 17,
+            overlay_version: 29,
+            overlay_min_version: 17,
+            version_string: "v19.13.0".try_into().unwrap(),
+            network_id: "Test SDF Network ; September 2015".to_string(),
+        }
+    }
 }

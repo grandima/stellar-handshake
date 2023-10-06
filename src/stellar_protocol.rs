@@ -1,47 +1,31 @@
+use std::io;
 
-use std::time::SystemTime;
 use thiserror::*;
 
-use crate::connection_authentication::{ConnectionAuthentication, MacKeyType, AuthenticationError};
-use crate::node_config::{NodeConfig, NodeInfo};
+use crate::connection_authentication::{ConnectionAuthentication, AuthenticationError};
+use crate::node_config::{NodeConfig};
 use crate::remote_node_info::RemoteNodeInfo;
-use crate::utils::misc::{generate_nonce};
+
 use crate::utils::sha2::{create_sha256_hmac};
 
 use crate::xdr::constants::SHA256_LENGTH;
 use crate::xdr::messages::{Auth, AuthenticatedMessage, AuthenticatedMessageV0, Hello, StellarMessage};
-use crate::xdr::streams::{DecodeError, ReadStream, WriteStream};
+use crate::xdr::streams::{DecodeError, WriteStream};
 use crate::xdr::types::{XdrSelfCoded, HmacSha256Mac, Uint256, Uint64, NodeId};
 use crate::xdr::xdr_codable::XdrCodable;
 
-
-pub struct StellarProtocol<F: Fn() -> u64> {
+pub struct StellarProtocol {
     pub node_config: NodeConfig,
     pub authentication: ConnectionAuthentication,
     pub remote_node_info: Option<RemoteNodeInfo>,
     pub local_nonce: Uint256,
     pub local_sequence: Uint64,
     pub sending_mac_key: Option<Vec<u8>>,
-    pub time_provider: F
-}
-use std::io;
-
-#[derive(Debug, Error)]
-#[error("Stellar error")]
-pub enum StellarError {
-    AuthenticationError(#[from] AuthenticationError),
-    DecodeError(#[from] DecodeError),
-    #[error("IO error: {0}")]
-    GenericError(#[from] io::Error),
-    ConnectionResetByPeer
-}
-pub enum HandshakeMessageExtract {
-    Hello(Result<RemoteNodeInfo, StellarError>),
-    Auth
+    pub time_provider: fn() -> u64
 }
 
-impl <F: Fn() -> u64> StellarProtocol<F> {
-    pub fn new(node_config: NodeConfig, generate_nonce: impl Fn() -> Uint256, authentication: ConnectionAuthentication, time_provider: F) -> Self {
+impl StellarProtocol {
+    pub fn new(node_config: NodeConfig, generate_nonce: impl Fn() -> Uint256, authentication: ConnectionAuthentication, time_provider: fn() -> u64) -> Self {
         Self {
             node_config,
             authentication,
@@ -81,7 +65,6 @@ impl <F: Fn() -> u64> StellarProtocol<F> {
     }
     pub fn create_auth_message(&mut self, remote_node_info: RemoteNodeInfo) -> XdrSelfCoded<AuthenticatedMessage> {
         self.sending_mac_key = Some(self.authentication.mac_key(
-            MacKeyType::Sending,
             &self.local_nonce,
             &remote_node_info.remote_nonce,
             &remote_node_info.remote_public_key_ecdh
@@ -110,3 +93,18 @@ impl <F: Fn() -> u64> StellarProtocol<F> {
     }
 }
 
+
+#[derive(Debug, Error)]
+#[error("Stellar error")]
+pub enum StellarError {
+    AuthenticationError(#[from] AuthenticationError),
+    DecodeError(#[from] DecodeError),
+    #[error("IO error: {0}")]
+    IOError(#[from] io::Error),
+    ConnectionResetByPeer,
+    ExpectedMoreMessages
+}
+pub enum HandshakeMessageExtract {
+    Hello(Result<RemoteNodeInfo, StellarError>),
+    Auth
+}

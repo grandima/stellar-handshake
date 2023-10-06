@@ -1,4 +1,4 @@
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::{SystemTime, UNIX_EPOCH};
 use dryoc::rng::{randombytes_buf};
 use crate::utils::sha2::{create_sha256};
 use crate::xdr::types::Uint256;

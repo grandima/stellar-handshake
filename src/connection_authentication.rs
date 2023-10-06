@@ -1,44 +1,37 @@
 use std::collections::HashMap;
+use std::ops::Deref;
 
-use crate::keypair::*;
-//use dryoc::rng::randombytes_buf;
+use crate::keychain::*;
 use dryoc::classic::crypto_core::crypto_scalarmult_base;
 use crate::xdr::auth_cert::{AuthCert, Curve25519Public};
-use std::time::{SystemTime, UNIX_EPOCH};
+
 use dryoc::classic::crypto_sign::crypto_sign_verify_detached;
+use dryoc::rng::copy_randombytes;
 use thiserror::Error;
-
-
+use crate::node_config::NodeConfig;
 use crate::utils::sha2::{create_sha256, create_sha256_hmac};
 use crate::xdr::constants::{PUBLIC_KEY_LENGTH, SEED_LENGTH, SHA256_LENGTH};
 use crate::xdr::streams::WriteStream;
 use crate::xdr::types::{EnvelopeType, Signature, Uint256};
 use crate::xdr::xdr_codable::XdrCodable;
 
-
-//TODO remove
-pub enum MacKeyType {
-    Sending
-}
-
-#[derive(Error, Debug)]
-pub enum AuthenticationError {
-    #[error("Cert expired")]
-    VerificationCertExpired,
-    #[error("Signature not verified")]
-    VerificationSignature
-}
-
 #[derive(Debug)]
 pub struct ConnectionAuthentication {
-    //TODO REMOVE
     called_remote_keys: HashMap<Uint256, Vec<u8>>,
     keychain: Keychain,
     network_id: Uint256,
-    pub secret_key_ecdh: [u8; SEED_LENGTH],
-    pub public_key_ecdh: Curve25519Public,
+    per_connection_seckey: Curve25519Secret,
+    per_connection_pubkey: Curve25519Public,
     auth_cert: Option<AuthCert>,
     auth_cert_expiration: u64,
+}
+
+impl Default for ConnectionAuthentication {
+    fn default() -> Self {
+        let mut secret_key_ecdh = [0u8; SEED_LENGTH];
+        copy_randombytes(&mut secret_key_ecdh);
+        Self::new(Keychain::default(), NodeConfig::default().node_info.network_id, secret_key_ecdh)
+    }
 }
 
 impl ConnectionAuthentication {
@@ -51,8 +44,8 @@ impl ConnectionAuthentication {
             called_remote_keys: Default::default(),
             keychain: keypair,
             network_id: hashed_network_id,
-            public_key_ecdh: Curve25519Public{key: public_key_ecdh},
-            secret_key_ecdh,
+            per_connection_pubkey: Curve25519Public{key: public_key_ecdh},
+            per_connection_seckey: Curve25519Secret{key: secret_key_ecdh},
             auth_cert: None,
             auth_cert_expiration: 0
         }
@@ -85,20 +78,15 @@ impl ConnectionAuthentication {
     }
 
     pub fn mac_key(&mut self,
-                          mac_key_type: MacKeyType,
                           local_nonce: &Uint256,
                           remote_nonce: &Uint256,
                           remote_public_key_ecdh: &Uint256
     ) -> Vec<u8> {
         let mut buff = vec![];
-        match mac_key_type {
-            MacKeyType::Sending => {
-                buff.push(0);
-                buff.extend_from_slice(local_nonce.as_ref());
-                buff.extend_from_slice(remote_nonce.as_ref());
-                buff.push(1);
-            }
-        };
+        buff.push(0);
+        buff.extend_from_slice(local_nonce.as_ref());
+        buff.extend_from_slice(remote_nonce.as_ref());
+        buff.push(1);
         let shared_key = self.shared_key(remote_public_key_ecdh);
         create_sha256_hmac(&buff, &shared_key)
     }
@@ -107,10 +95,10 @@ impl ConnectionAuthentication {
             return shared_key.clone();
         }
         let mut buf = [0u8; dryoc::constants::CRYPTO_SCALARMULT_BYTES];
-        dryoc::classic::crypto_core::crypto_scalarmult(&mut buf, &self.secret_key_ecdh, remote_public_key_ecdh);
+        dryoc::classic::crypto_core::crypto_scalarmult(&mut buf, &self.per_connection_seckey, remote_public_key_ecdh);
         let mut message_to_sign = [0u8; 96];
         message_to_sign[..32].copy_from_slice(&buf);
-        message_to_sign[32..64].copy_from_slice(&self.public_key_ecdh.key);
+        message_to_sign[32..64].copy_from_slice(&self.per_connection_pubkey.key);
         message_to_sign[64..].copy_from_slice(remote_public_key_ecdh);
         let zero_salt = [0u8; SHA256_LENGTH];
         let result_buf = create_sha256_hmac(&message_to_sign, &zero_salt);
@@ -135,12 +123,12 @@ impl ConnectionAuthentication {
         let mut signature_data = self.network_id.clone().to_vec();
         signature_data.extend(xdr_envelope_type_result.iter());
         signature_data.extend(bytes_expiration.iter());
-        signature_data.extend(self.public_key_ecdh.key.iter());
+        signature_data.extend(self.per_connection_pubkey.key.iter());
         let hashed_signature_data = create_sha256(&signature_data);
         let signed = self.keychain.sign(hashed_signature_data);
         let sig = Signature::new(signed.to_vec());
         AuthCert {
-            pubkey: self.public_key_ecdh.clone(),
+            pubkey: self.per_connection_pubkey.clone(),
             expiration: self.auth_cert_expiration,
             sig
         }
@@ -152,3 +140,25 @@ impl ConnectionAuthentication {
         self.network_id
     }
 }
+
+
+#[derive(Debug)]
+pub struct Curve25519Secret {
+    pub key: Uint256,
+}
+
+impl Deref for Curve25519Secret {
+    type Target = Uint256;
+    fn deref(&self) -> &Self::Target {
+        &self.key
+    }
+}
+
+#[derive(Error, Debug)]
+pub enum AuthenticationError {
+    #[error("Cert expired")]
+    VerificationCertExpired,
+    #[error("Signature not verified")]
+    VerificationSignature
+}
+

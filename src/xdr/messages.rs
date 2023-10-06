@@ -37,7 +37,6 @@ impl XdrCodable for Hello {
         self.overlay_version.encode(write_stream);
         self.overlay_min_version.encode(write_stream);
         self.network_id.encode(write_stream);
-        // println!("{}", String::from_utf8(self.network_id.to_vec().clone()).unwrap());
         self.version_str.encode(write_stream);
         self.listening_port.encode(write_stream);
         self.peer_id.encode(write_stream);

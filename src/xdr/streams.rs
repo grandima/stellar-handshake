@@ -8,7 +8,7 @@ pub struct WriteStream {
 
 impl WriteStream {
     pub fn new() -> WriteStream {
-        WriteStream { result: Vec::with_capacity(128) }
+        WriteStream { result: Vec::with_capacity(4) }
     }
     pub fn write_binary_data(&mut self, value: &[u8]) {
         self.result.extend_from_slice(value);
@@ -65,17 +65,7 @@ impl<T: AsRef<[u8]>> ReadStream<T> {
     }
     pub fn read_length(&mut self, only_peek: bool) -> Result<usize, DecodeError> {
         let array: &[u8; 4] = self.read_limited_bytes_array(only_peek)?;
-        Ok(u32::from_be_bytes(*array) as usize)
-    }
-
-    fn peek_limited_bytes_array<const N: usize>(&mut self) -> Result<&[u8; N], DecodeError> {
-        let array: Result<&[u8; N], _> = (self.source.as_ref()[self.read_index..self.read_index + N]).try_into();
-        match array {
-            Ok(array) => {
-                Ok(array)
-            },
-            Err(_) => Err(self.sudden_end_error(N)),
-        }
+        Ok((u32::from_be_bytes(*array) & 0x7f_ff_ff_ff) as usize)
     }
 
     fn read_limited_bytes_array<const N: usize>(&mut self, only_peek: bool) -> Result<&[u8; N], DecodeError> {

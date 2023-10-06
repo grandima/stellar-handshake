@@ -1,46 +1,45 @@
-use std::marker::PhantomData;
+
 use std::net::SocketAddr;
-use std::sync::Arc;
+
 
 use bytes::{Buf, BytesMut};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 
-use crate::stellar_protocol::StellarError;
-use crate::xdr::messages::{Auth, AuthenticatedMessage};
+use crate::stellar_protocol::{StellarError, StellarProtocol};
+use crate::xdr::messages::{AuthenticatedMessage};
 use crate::xdr::streams::ReadStream;
 use crate::xdr::types::XdrSelfCoded;
 use crate::xdr::xdr_codable::XdrCodable;
 
 pub struct Connection {
+    protocol: StellarProtocol,
     socket: TcpStream,
     read_buffer: BytesMut,
 }
 impl Connection {
-    /// Convenience factory
     pub fn new(
+        protocol: StellarProtocol,
         socket: TcpStream,
     ) -> Connection {
         Connection {
+            protocol,
             socket,
             read_buffer: BytesMut::with_capacity(0x4000),
         }
     }
+    pub fn protocol(&mut self) -> &mut  StellarProtocol {
+        &mut self.protocol
+    }
 
-
-    /// Connect to a peer at a known address
     pub async fn connect(
+        protocol: StellarProtocol,
         addr: SocketAddr,
     ) -> Result<Connection, StellarError> {
         let socket = TcpStream::connect(addr).await?;
-        Ok(Connection::new(socket))
+        Ok(Connection::new(protocol, socket))
     }
 
-    /// Return the next available message - the function is async, so this is non-blocking.
-    ///
-    /// `Ok(None)` means that the connection was closed gracefully.
-    /// `Err(_)` leaves the connection in a potentially inconsistent state, making it illegal to
-    ///   use for sending or receiving messages.
     pub async fn receive(&mut self) -> Result<Option<XdrSelfCoded<AuthenticatedMessage>>, StellarError> {
         loop {
             match self.parse_message() {
