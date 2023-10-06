@@ -15,13 +15,13 @@ use crate::xdr::types::{XdrSelfCoded, HmacSha256Mac, Uint256, Uint64, NodeId};
 use crate::xdr::xdr_codable::XdrCodable;
 
 pub struct StellarProtocol {
-    pub node_config: NodeConfig,
-    pub authentication: ConnectionAuthentication,
-    pub remote_node_info: Option<RemoteNodeInfo>,
-    pub local_nonce: Uint256,
-    pub local_sequence: Uint64,
-    pub sending_mac_key: Option<Vec<u8>>,
-    pub time_provider: fn() -> u64
+    node_config: NodeConfig,
+    authentication: ConnectionAuthentication,
+    remote_node_info: Option<RemoteNodeInfo>,
+    local_nonce: Uint256,
+    local_sequence: Uint64,
+    sending_mac_key: Option<Vec<u8>>,
+    time_provider: fn() -> u64
 }
 
 impl StellarProtocol {

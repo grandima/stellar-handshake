@@ -29,14 +29,17 @@ impl Default for Keychain {
     }
 }
 impl TryFrom<&str> for Keychain {
-    type Error = &'static str;
+    type Error = KeychainError;
     fn try_from(key: &str) -> Result<Self, Self::Error> {
         let decoded = BASE32.decode(key.as_bytes()).unwrap();
         let _version_byte = decoded[0];
         let payload = &decoded[..decoded.len()-2];
         let data = &payload[1..];
         if data.len() != SEED_LENGTH {
-            return Err("wrong length")
+            return Err(KeychainError::WrongLength {
+                expected: SEED_LENGTH as u32,
+                actual: data.len() as u32
+            });
         }
         let mut seed = [0u8; SEED_LENGTH];
         seed.copy_from_slice(data);
@@ -58,7 +61,7 @@ impl From<&[u8; SEED_LENGTH]> for Keychain {
 }
 
 #[derive(Debug, thiserror::Error)]
-pub enum Error {
+pub enum KeychainError {
     #[error("Wrong seed: expected {expected}, found {actual}")]
     WrongLength {expected: u32, actual: u32},
 }
