@@ -1,8 +1,6 @@
 use crate::connection::Connection;
 use crate::stellar_protocol::{HandshakeMessageExtract, StellarError};
 
-
-
 pub async fn execute_handshake(
     connection: &mut Connection,
 ) -> Result<bool, StellarError> {

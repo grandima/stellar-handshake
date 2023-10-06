@@ -1,4 +1,4 @@
-mod keypair_type;
+
 mod keychain;
 mod node_config;
 mod connection_authentication;
@@ -7,7 +7,6 @@ mod stellar_protocol;
 mod remote_node_info;
 mod public_key;
 mod utils;
-mod stellar;
 mod connection;
 mod handshake;
 

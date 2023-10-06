@@ -67,7 +67,7 @@ impl StellarProtocol {
         self.sending_mac_key = Some(self.authentication.mac_key(
             &self.local_nonce,
             &remote_node_info.remote_nonce,
-            &remote_node_info.remote_public_key_ecdh
+            &remote_node_info.remote_public_key_ecdh.key
         ));
         self.remote_node_info = Some(remote_node_info);
         let message = StellarMessage::Auth(Auth{flags: 100});
@@ -76,7 +76,7 @@ impl StellarProtocol {
     }
 
     fn mac_for_authenticated_message(&self, message: &StellarMessage) -> HmacSha256Mac {
-        if self.remote_node_info.as_ref().map(|node|node.remote_public_key_ecdh).is_none() {
+        if self.remote_node_info.as_ref().map(|node|node.remote_public_key_ecdh.key).is_none() {
             HmacSha256Mac{mac: [0u8; SHA256_LENGTH]}
         } else if let Some(sending_mac_key) = &self.sending_mac_key {
             let mut writer = WriteStream::default();
