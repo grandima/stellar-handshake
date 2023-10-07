@@ -1,8 +1,8 @@
 use crate::connection::Connection;
-use crate::stellar_protocol::{HandshakeMessageExtract, StellarError};
+use crate::stellar_protocol::{HandshakeMessageExtract, StellarError, StellarProtocolImpl, StellarProtocolTrait};
 
-pub async fn execute_handshake(
-    connection: &mut Connection,
+pub async fn execute_handshake<P: StellarProtocolTrait>(
+    connection: &mut Connection<P>,
 ) -> Result<bool, StellarError> {
     let message = connection.protocol().create_hello_message();
     connection.send(message).await?;

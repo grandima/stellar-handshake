@@ -11,14 +11,6 @@ impl<T: XdrCodable> XdrSelfCoded<T> {
     pub fn new(value: T) -> Self {
         Self (value)
     }
-    
-    pub(crate) fn has_complete_message(buf: &[u8]) -> Result<bool, DecodeError> {
-        if buf.len() < 4 {
-            return Ok(false);
-        }
-        let length = ReadStream::new(buf).read_length(true)? ;
-        Ok(length + 4 <= buf.len())
-    }
 }
 
 impl <T: XdrCodable> XdrCodable for XdrSelfCoded<T> {

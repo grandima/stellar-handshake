@@ -35,7 +35,8 @@ impl Default for ConnectionAuthentication {
 }
 
 impl ConnectionAuthentication {
-    const  AUTH_EXPIRATION_LIMIT: u64 = 360000; //60 minutes
+    // value taken from original code
+    const  AUTH_EXPIRATION_LIMIT: u64 = 360000;
     pub fn new(keypair: Keychain, network_id: impl AsRef<[u8]>, secret_key_ecdh: [u8; SEED_LENGTH]) -> Self {
         let hashed_network_id = create_sha256(network_id.as_ref());
         let mut public_key_ecdh = [0u8; PUBLIC_KEY_LENGTH];

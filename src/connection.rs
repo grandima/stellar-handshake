@@ -6,41 +6,41 @@ use bytes::{Buf, BytesMut};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 
-use crate::stellar_protocol::{StellarError, StellarProtocol};
+use crate::stellar_protocol::{P2PMessage, StellarError, StellarProtocolImpl, StellarProtocolTrait};
 use crate::xdr::messages::{AuthenticatedMessage};
 use crate::xdr::streams::ReadStream;
 use crate::xdr::types::XdrSelfCoded;
 use crate::xdr::xdr_codable::XdrCodable;
 
-pub struct Connection {
-    protocol: StellarProtocol,
+pub struct Connection<P: StellarProtocolTrait> {
+    protocol: P,
     socket: TcpStream,
     read_buffer: BytesMut,
 }
-impl Connection {
+impl<P: StellarProtocolTrait> Connection<P> {
     pub fn new(
-        protocol: StellarProtocol,
+        protocol: P,
         socket: TcpStream,
-    ) -> Connection {
+    ) -> Connection<P> {
         Connection {
             protocol,
             socket,
             read_buffer: BytesMut::with_capacity(0x4000),
         }
     }
-    pub fn protocol(&mut self) -> &mut  StellarProtocol {
+    pub fn protocol(&mut self) -> &mut P {
         &mut self.protocol
     }
 
     pub async fn connect(
-        protocol: StellarProtocol,
+        protocol: P,
         addr: SocketAddr,
-    ) -> Result<Connection, StellarError> {
+    ) -> Result<Connection<P>, StellarError> {
         let socket = TcpStream::connect(addr).await?;
         Ok(Connection::new(protocol, socket))
     }
 
-    pub async fn receive(&mut self) -> Result<Option<XdrSelfCoded<AuthenticatedMessage>>, StellarError> {
+    pub async fn receive(&mut self) -> Result<Option<P::Message>, StellarError> {
         loop {
             match self.parse_message() {
                 Ok(Some(message)) => return Ok(Some(message)),
@@ -60,10 +60,10 @@ impl Connection {
         }
     }
 
-    fn parse_message(&mut self) -> Result<Option<XdrSelfCoded<AuthenticatedMessage>>, StellarError> {
-        if XdrSelfCoded::<AuthenticatedMessage>::has_complete_message(self.read_buffer.as_ref())? {
+    fn parse_message(&mut self) -> Result<Option<P::Message>, StellarError> {
+        if P::Message::has_complete_message(self.read_buffer.as_ref())? {
             let mut stream = ReadStream::new(self.read_buffer.as_ref());
-            let message = XdrSelfCoded::<AuthenticatedMessage>::decode(&mut stream)?;
+            let message = P::Message::decode(&mut stream)?;
             self.read_buffer.advance(stream.get_position());
             Ok(Some(message))
         } else {
@@ -71,7 +71,7 @@ impl Connection {
         }
     }
 
-    pub async fn send(&mut self, message: XdrSelfCoded<AuthenticatedMessage>) -> Result<(), StellarError> {
+    pub async fn send(&mut self, message: P::Message) -> Result<(), StellarError> {
         let encoded = message.encoded();
         if let Err(e) = self.socket.write(&encoded).await {
             return Err(e.into());
