@@ -16,18 +16,19 @@ use crate::xdr::streams::{DecodeError, ReadStream, WriteStream};
 use crate::xdr::types::{XdrSelfCoded, HmacSha256Mac, Uint256, Uint64, NodeId};
 use crate::xdr::xdr_codable::XdrCodable;
 
-pub trait StellarProtocolTrait {
-    type Message: P2PMessage;
+pub trait Protocol: Sized {
+    type Message: MessageTrait;
     type MessageExtract;
+    type NodeInfo: Sized;
     fn create_hello_message(&mut self) -> Self::Message;
-    fn create_auth_message(&mut self, remote_node_info: RemoteNodeInfo) -> Self::Message;
-    fn handle_message(&self, message: &Self::Message) -> HandshakeMessageExtract;
+    fn create_auth_message(&mut self, remote_node_info: Self::NodeInfo) -> Self::Message;
+    fn handle_message(&self, message: &Self::Message) -> HandshakeMessageExtract<Self>;
 }
-pub trait P2PMessage: XdrCodable + Sized {
+pub trait MessageTrait: XdrCodable + Sized {
     fn has_complete_message(buf: &[u8]) -> Result<bool, StellarError>;
 }
 
-impl <T: XdrCodable> P2PMessage for XdrSelfCoded<T> {
+impl <T: XdrCodable> MessageTrait for XdrSelfCoded<T> {
     fn has_complete_message(buf: &[u8]) -> std::result::Result<bool, stellar_protocol::StellarError> {
         if buf.len() < 4 {
             return Ok(false);
@@ -77,9 +78,10 @@ impl StellarProtocolImpl {
     }
 }
 
-impl StellarProtocolTrait for StellarProtocolImpl {
+impl Protocol for StellarProtocolImpl {
     type Message = XdrSelfCoded<AuthenticatedMessage>;
-    type MessageExtract = HandshakeMessageExtract;
+    type MessageExtract = HandshakeMessageExtract<Self>;
+    type NodeInfo = RemoteNodeInfo;
     fn create_hello_message(&mut self) -> XdrSelfCoded<AuthenticatedMessage> {
         let hello = Hello {
             ledger_version: self.node_config.node_info.ledger_version,
@@ -130,7 +132,7 @@ pub enum StellarError {
     ConnectionResetByPeer,
     ExpectedMoreMessages
 }
-pub enum HandshakeMessageExtract {
-    Hello(Result<RemoteNodeInfo, StellarError>),
+pub enum HandshakeMessageExtract<P: Protocol> {
+    Hello(Result<P::NodeInfo, StellarError>),
     Auth
 }

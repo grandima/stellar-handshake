@@ -6,18 +6,18 @@ use bytes::{Buf, BytesMut};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 
-use crate::stellar_protocol::{P2PMessage, StellarError, StellarProtocolImpl, StellarProtocolTrait};
+use crate::stellar_protocol::{MessageTrait, StellarError, StellarProtocolImpl, Protocol};
 use crate::xdr::messages::{AuthenticatedMessage};
 use crate::xdr::streams::ReadStream;
 use crate::xdr::types::XdrSelfCoded;
 use crate::xdr::xdr_codable::XdrCodable;
 
-pub struct Connection<P: StellarProtocolTrait> {
+pub struct Connection<P: Protocol> {
     protocol: P,
     socket: TcpStream,
     read_buffer: BytesMut,
 }
-impl<P: StellarProtocolTrait> Connection<P> {
+impl<P: Protocol> Connection<P> {
     pub fn new(
         protocol: P,
         socket: TcpStream,

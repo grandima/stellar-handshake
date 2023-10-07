@@ -13,7 +13,7 @@ mod handshake;
 use keychain::Keychain;
 use node_config::NodeConfig;
 use connection_authentication::*;
-use crate::stellar_protocol::{StellarProtocolImpl, StellarProtocolTrait};
+use crate::stellar_protocol::{StellarProtocolImpl, Protocol};
 use crate::xdr::constants::SEED_LENGTH;
 use std::error::Error;
 use std::net::SocketAddr;
@@ -31,12 +31,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
     copy_randombytes(&mut secret_key_ecdh);
     let authentication = ConnectionAuthentication::new(keychain, &node_config.node_info.network_id, secret_key_ecdh);
     let protocol = StellarProtocolImpl::new(node_config, generate_nonce, authentication, current_u64_milliseconds);
-    let mut connection = Connection::connect(protocol, SocketAddr::from_str("127.0.0.1:11601").unwrap()).await.unwrap();
+    let mut connection = Connection::connect(protocol, SocketAddr::from_str("148.251.179.166:11625").unwrap()).await.unwrap();
     on_server_connection(&mut connection).await;
     Ok(())
 }
 
-async fn on_server_connection<P: StellarProtocolTrait>(server_connection: &mut Connection<P>) {
+async fn on_server_connection<P: Protocol>(server_connection: &mut Connection<P>) {
     let negotiated = execute_handshake(server_connection).await.unwrap();
     println!("result: {}", negotiated);
 }

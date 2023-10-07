@@ -1,7 +1,7 @@
 use crate::connection::Connection;
-use crate::stellar_protocol::{HandshakeMessageExtract, StellarError, StellarProtocolImpl, StellarProtocolTrait};
+use crate::stellar_protocol::{HandshakeMessageExtract, StellarError, StellarProtocolImpl, Protocol};
 
-pub async fn execute_handshake<P: StellarProtocolTrait>(
+pub async fn execute_handshake<P: Protocol>(
     connection: &mut Connection<P>,
 ) -> Result<bool, StellarError> {
     let message = connection.protocol().create_hello_message();
