@@ -15,11 +15,22 @@ pub fn generate_nonce() -> Uint256 {
     local_nonce
 }
 
-pub fn current_u64_milliseconds() -> u64 {
+pub fn get_current_u64_milliseconds() -> u64 {
         SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .map(|duration|duration.as_millis())
             .unwrap_or(0)
             .try_into()
             .unwrap_or(0)
+}
+
+pub fn increase_buffer_by_one(buf: &mut [u8]) {
+    for byte in buf.iter_mut().rev() {
+        if *byte != 255 {
+            *byte += 1;
+            break;
+        } else {
+            *byte = 0;
+        }
+    }
 }

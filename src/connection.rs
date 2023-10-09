@@ -1,15 +1,9 @@
 
 use std::net::SocketAddr;
-
-
-use bytes::{Buf, BytesMut};
+use bytes::{BytesMut};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
-
-use crate::stellar_protocol::{MessageTrait, StellarError, StellarProtocolImpl, Protocol};
-use crate::xdr::messages::{AuthenticatedMessage};
-use crate::xdr::streams::ReadStream;
-use crate::xdr::types::XdrSelfCoded;
+use crate::protocol::stellar_protocol::{Protocol, ProtocolMessage, StellarError};
 use crate::xdr::xdr_codable::XdrCodable;
 
 pub struct Connection<P: Protocol> {
@@ -40,10 +34,10 @@ impl<P: Protocol> Connection<P> {
         Ok(Connection::new(protocol, socket))
     }
 
-    pub async fn receive(&mut self) -> Result<Option<P::Message>, StellarError> {
+    pub async fn receive(&mut self) -> Result<Option<(P::Message, Vec<u8>)>, StellarError> {
         loop {
             match self.parse_message() {
-                Ok(Some(message)) => return Ok(Some(message)),
+                Ok(Some(result)) => return Ok(Some((result.0, result.1.into()))),
                 Ok(None) => {
                     if 0 == self.socket.read_buf(&mut self.read_buffer).await? {
                         return if self.read_buffer.is_empty() {
@@ -60,12 +54,11 @@ impl<P: Protocol> Connection<P> {
         }
     }
 
-    fn parse_message(&mut self) -> Result<Option<P::Message>, StellarError> {
+    fn parse_message(&mut self) -> Result<Option<(P::Message, BytesMut)>, StellarError> {
         if P::Message::has_complete_message(self.read_buffer.as_ref())? {
-            let mut stream = ReadStream::new(self.read_buffer.as_ref());
-            let message = P::Message::decode(&mut stream)?;
-            self.read_buffer.advance(stream.get_position());
-            Ok(Some(message))
+            let (message, size) = P::Message::decoded(self.read_buffer.as_ref())?;
+            let raw_message = self.read_buffer.split_to(size);
+            Ok(Some((message, raw_message)))
         } else {
             Ok(None)
         }

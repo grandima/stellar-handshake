@@ -9,6 +9,11 @@ pub trait XdrCodable: Sized {
         self.encode(&mut write_stream);
         write_stream.result()
     }
+    fn decoded<T: AsRef<[u8]>>(bytes: T) -> Result<(Self, usize), DecodeError> {
+        let mut read_stream = ReadStream::new(bytes);
+        let result = Self::decode(&mut read_stream);
+        result.map(|value|(value, read_stream.get_position()))
+    }
 }
 
 impl<const N: usize> XdrCodable for [u8; N] {

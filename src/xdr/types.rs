@@ -5,15 +5,15 @@ use crate::xdr::streams::{DecodeError, ReadStream, WriteStream};
 use crate::xdr::xdr_codable::XdrCodable;
 
 #[derive(Debug)]
-pub struct XdrSelfCoded<T: XdrCodable> (pub T);
+pub struct XdrArchive<T: XdrCodable> (pub T);
 
-impl<T: XdrCodable> XdrSelfCoded<T> {
+impl<T: XdrCodable> XdrArchive<T> {
     pub fn new(value: T) -> Self {
         Self (value)
     }
 }
 
-impl <T: XdrCodable> XdrCodable for XdrSelfCoded<T> {
+impl <T: XdrCodable> XdrCodable for XdrArchive<T> {
     fn encode(&self, write_stream: &mut WriteStream) {
         let res = self.0.encoded();
         write_stream.write_u32(res.len() as u32 | 0x80_00_00_00);

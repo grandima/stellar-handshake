@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::ops::Deref;
 
-use crate::keychain::*;
+use super::keychain::Keychain;
 use dryoc::classic::crypto_core::crypto_scalarmult_base;
 use crate::xdr::auth_cert::{AuthCert, Curve25519Public};
 
@@ -17,7 +17,8 @@ use crate::xdr::xdr_codable::XdrCodable;
 
 #[derive(Debug)]
 pub struct ConnectionAuthentication {
-    called_remote_keys: HashMap<Uint256, Vec<u8>>,
+    we_called_remote_keys: HashMap<Uint256, Vec<u8>>,
+    us_called_remote_keys: HashMap<Uint256, Vec<u8>>,
     keychain: Keychain,
     network_id: Uint256,
     per_connection_seckey: Curve25519Secret,
@@ -42,7 +43,8 @@ impl ConnectionAuthentication {
         let mut public_key_ecdh = [0u8; PUBLIC_KEY_LENGTH];
         crypto_scalarmult_base(&mut public_key_ecdh, &secret_key_ecdh);
         Self {
-            called_remote_keys: Default::default(),
+            we_called_remote_keys: Default::default(),
+            us_called_remote_keys: Default::default(),
             keychain: keypair,
             network_id: hashed_network_id,
             per_connection_pubkey: Curve25519Public{key: public_key_ecdh},
@@ -51,6 +53,7 @@ impl ConnectionAuthentication {
             auth_cert_expiration: 0
         }
     }
+
     pub fn verify_remote_cert(&self,
                               time: u64,
                               remote_public_key: &Uint256,
@@ -81,18 +84,27 @@ impl ConnectionAuthentication {
     pub fn mac_key(&mut self,
                           local_nonce: &Uint256,
                           remote_nonce: &Uint256,
-                          remote_public_key_ecdh: &Uint256
+                          remote_public_key_ecdh: &Uint256,
+        we_called_remote: bool
     ) -> Vec<u8> {
         let mut buff = vec![];
-        buff.push(0);
-        buff.extend_from_slice(local_nonce.as_ref());
-        buff.extend_from_slice(remote_nonce.as_ref());
-        buff.push(1);
-        let shared_key = self.shared_key(remote_public_key_ecdh);
+        if we_called_remote {
+            buff.push(0);
+            buff.extend_from_slice(local_nonce.as_ref());
+            buff.extend_from_slice(remote_nonce.as_ref());
+            buff.push(1);
+        } else {
+            buff.push(1);
+            buff.extend_from_slice(remote_nonce.as_ref());
+            buff.extend_from_slice(local_nonce.as_ref());
+            buff.push(1);
+        }
+        let shared_key = self.shared_key(remote_public_key_ecdh, we_called_remote);
         create_sha256_hmac(&buff, &shared_key)
     }
-    fn shared_key(&mut self, remote_public_key_ecdh: &Uint256) -> Vec<u8> {
-        if let Some(shared_key) = self.called_remote_keys.get(remote_public_key_ecdh.as_ref()) {
+    fn shared_key(&mut self, remote_public_key_ecdh: &Uint256, we_called_remote: bool) -> Vec<u8> {
+        let keys_storage = if we_called_remote {&mut self.we_called_remote_keys} else {&mut self.us_called_remote_keys};
+        if let Some(shared_key) = keys_storage.get(remote_public_key_ecdh.as_ref()) {
             return shared_key.clone();
         }
         let mut buf = [0u8; dryoc::constants::CRYPTO_SCALARMULT_BYTES];
@@ -103,7 +115,7 @@ impl ConnectionAuthentication {
         message_to_sign[64..].copy_from_slice(remote_public_key_ecdh);
         let zero_salt = [0u8; SHA256_LENGTH];
         let result_buf = create_sha256_hmac(&message_to_sign, &zero_salt);
-        self.called_remote_keys.insert(*remote_public_key_ecdh, result_buf.clone());
+        keys_storage.insert(*remote_public_key_ecdh, result_buf.clone());
         result_buf
     }
 
