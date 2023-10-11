@@ -1,9 +1,10 @@
 
 use std::net::SocketAddr;
-use bytes::{BytesMut};
+use bytes::BytesMut;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
-use crate::protocol::stellar_protocol::{Protocol, ProtocolMessage, StellarError};
+use crate::protocol::errors::StellarError;
+use crate::protocol::protocol::{Protocol, ProtocolMessage};
 use crate::xdr::xdr_codable::XdrCodable;
 
 pub struct Connection<P: Protocol> {

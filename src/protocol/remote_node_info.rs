@@ -4,17 +4,17 @@ use crate::xdr::types::Uint256;
 
 #[derive(Clone)]
 pub struct RemoteNodeInfo {
-    pub remote_nonce: Uint256,
-    pub remote_public_key_ecdh: Curve25519Public,
+    pub nonce: Uint256,
+    pub public_key: Curve25519Public,
 }
 
 impl From<&Hello> for RemoteNodeInfo {
     fn from(hello: &Hello) -> Self {
         let remote_nonce = hello.nonce;
-        let remote_public_key_ecdh = hello.cert.pubkey.key;
+        let remote_public_key = hello.cert.persistent_public_key.key;
         Self {
-            remote_nonce,
-            remote_public_key_ecdh: Curve25519Public{key: remote_public_key_ecdh}
+            nonce: remote_nonce,
+            public_key: Curve25519Public{key: remote_public_key }
         }
     }
 }

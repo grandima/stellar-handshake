@@ -1,49 +1,25 @@
-use std::fmt::Debug;
-use std::io;
 
-use thiserror::*;
-
-use crate::protocol::connection_authentication::{ConnectionAuthentication, AuthenticationError};
-use crate::node_config::{NodeConfig};
+use crate::protocol::connection_authentication::ConnectionAuthentication;
+use crate::node_config::NodeConfig;
+use crate::protocol::errors::{StellarError, VerificationError};
 use crate::protocol::remote_node_info::RemoteNodeInfo;
-use crate::protocol::stellar_protocol;
-use crate::protocol::stellar_protocol::VerificationError::{MacKey, SequenceMismatch};
+use crate::protocol::errors::VerificationError::{MacKey, SequenceMismatch};
+use crate::protocol::protocol::Protocol;
 use crate::utils::misc::increase_buffer_by_one;
 
 use crate::utils::sha2::{create_sha256_hmac, verify_sha256_hmac};
 
 use crate::xdr::constants::SHA256_LENGTH;
 use crate::xdr::messages::{Auth, AuthenticatedMessage, AuthenticatedMessageV0, Hello, StellarMessage};
-use crate::xdr::streams::{DecodeError, ReadStream, WriteStream};
-use crate::xdr::types::{XdrArchive, HmacSha256Mac, Uint256, Uint64, NodeId};
+
+use crate::xdr::types::{HmacSha256Mac, NodeId, Uint256, Uint64, XdrArchive};
 use crate::xdr::xdr_codable::XdrCodable;
 
-pub trait Protocol: Sized {
-    type Message: ProtocolMessage;
-    type MessageExtract;
-    type NodeInfo: Sized;
-    fn create_hello_message(&mut self) -> Self::Message;
-    fn create_auth_message(&mut self, remote_node_info: Self::NodeInfo) -> Self::Message;
-    fn handle_message(&mut self, message: (&Self::Message, Vec<u8>)) -> Result<HandshakeMessageExtract<Self>, StellarError>;
-}
-pub trait ProtocolMessage: XdrCodable + Sized {
-    fn has_complete_message(buf: &[u8]) -> Result<bool, StellarError>;
-}
-
-impl <T: XdrCodable> ProtocolMessage for XdrArchive<T> {
-    fn has_complete_message(buf: &[u8]) -> std::result::Result<bool, stellar_protocol::StellarError> {
-        if buf.len() < 4 {
-            return Ok(false);
-        }
-        let length = ReadStream::new(buf).read_length(true)? ;
-        Ok(length + 4 <= buf.len())
-    }
-}
 pub struct StellarProtocol<F: Fn() -> u64> {
     node_config: NodeConfig,
     authentication: ConnectionAuthentication,
-    remote_node_info: Option<RemoteNodeInfo>,
     local_nonce: Uint256,
+    /// We don't need to store them for handshake process, but if we want to send more and receive more messages, we need to store them
     local_sequence: Uint64,
     remote_sequence: Uint64,
     sending_mac_key: Option<Vec<u8>>,
@@ -58,7 +34,6 @@ impl <F: Fn() -> u64> StellarProtocol<F> {
             authentication,
             local_nonce,
             sending_mac_key: None,
-            remote_node_info: None,
             local_sequence: [0u8; 8],
             remote_sequence: [0u8; 8],
             time_provider,
@@ -66,13 +41,8 @@ impl <F: Fn() -> u64> StellarProtocol<F> {
         }
     }
     fn mac_for_authenticated_message(&self, message: &StellarMessage) -> HmacSha256Mac {
-        if self.remote_node_info.as_ref().map(|node|node.remote_public_key_ecdh.key).is_none() {
-            HmacSha256Mac{mac: [0u8; SHA256_LENGTH]}
-        } else if let Some(sending_mac_key) = &self.sending_mac_key {
-            let mut writer = WriteStream::default();
-            message.encode(&mut writer);
-            let mut data =  self.local_sequence.to_vec();
-            data.extend_from_slice(&writer.result());
+        if let Some(sending_mac_key) = &self.sending_mac_key {
+            let data = [&self.local_sequence, message.encoded().as_slice()].concat();
             let mut mac = [0u8; SHA256_LENGTH];
             let sha_result = create_sha256_hmac(&data, sending_mac_key);
             mac.copy_from_slice(&sha_result);
@@ -81,64 +51,6 @@ impl <F: Fn() -> u64> StellarProtocol<F> {
             HmacSha256Mac { mac: [0u8; SHA256_LENGTH] }
         }
     }
-
-}
-
-impl <F: Fn() -> u64> Protocol for StellarProtocol<F> {
-    type Message = XdrArchive<AuthenticatedMessage>;
-    type MessageExtract = Result<HandshakeMessageExtract<Self>, StellarError>;
-    type NodeInfo = RemoteNodeInfo;
-    fn create_hello_message(&mut self) -> XdrArchive<AuthenticatedMessage> {
-        let hello = Hello {
-            ledger_version: self.node_config.node_info.ledger_version,
-            overlay_version: self.node_config.node_info.overlay_version,
-            overlay_min_version: self.node_config.node_info.overlay_min_version,
-            network_id: self.authentication.network_id(),
-            version_str: self.node_config.node_info.version_string.clone(),
-            listening_port: self.node_config.listening_port,
-            peer_id: NodeId::PublicKeyTypeEd25519(*self.authentication.keychain().public_key()),
-            cert: self.authentication.auth_cert((self.time_provider)()).clone(),
-            nonce: self.local_nonce,
-        };
-        XdrArchive(AuthenticatedMessage::V0(AuthenticatedMessageV0{message: StellarMessage::Hello(hello), mac: HmacSha256Mac::default(), sequence: [0u8; 8]}))
-    }
-    fn create_auth_message(&mut self, remote_node_info: RemoteNodeInfo) -> XdrArchive<AuthenticatedMessage> {
-        self.sending_mac_key = Some(self.authentication.mac_key(
-            &self.local_nonce,
-            &remote_node_info.remote_nonce,
-            &remote_node_info.remote_public_key_ecdh.key,
-            true,
-        ));
-        self.receiving_mac_key = Some(self.authentication.mac_key(
-            &self.local_nonce,
-            &remote_node_info.remote_nonce,
-            &remote_node_info.remote_public_key_ecdh.key,
-            false,
-        ));
-        self.remote_node_info = Some(remote_node_info);
-        let message = StellarMessage::Auth(Auth{flags: 100});
-        let mac = self.mac_for_authenticated_message(&message);
-        let message = XdrArchive::new(AuthenticatedMessage::V0(AuthenticatedMessageV0{message, sequence: self.local_sequence, mac}));
-        self.inc_loc_seq();
-        message
-    }
-    fn handle_message(&mut self, result: (&XdrArchive<AuthenticatedMessage>, Vec<u8>)) -> Result<HandshakeMessageExtract<Self>,StellarError> {
-        let AuthenticatedMessage::V0(message) = &result.0.0;
-        if let StellarMessage::Hello(hello) = &message.message {
-            self.authentication.verify_remote_cert((self.time_provider)(), hello.peer_id.as_binary(), &hello.cert)?;
-            Ok(HandshakeMessageExtract::Hello(RemoteNodeInfo::from(hello)))
-        } else {
-            self.verify_v0_message(message, &result.1[8..&result.1.len() - 32])?;
-            self.inc_rem_seq();
-            match &message.message {
-                StellarMessage::Auth(_) => {Ok(HandshakeMessageExtract::Auth)},
-                _ => {unreachable!()}
-            }
-        }
-    }
-}
-
-impl<F: Fn() -> u64> StellarProtocol<F> {
     fn inc_loc_seq(&mut self) {
         increase_buffer_by_one(&mut self.local_sequence);
     }
@@ -155,25 +67,64 @@ impl<F: Fn() -> u64> StellarProtocol<F> {
         }
     }
 }
-#[derive(Debug, Error)]
-pub enum VerificationError {
-    #[error("Local and remote sequences do not match")]
-    SequenceMismatch,
-    #[error("Mac key verification failed")]
-    MacKey,
+
+impl <F: Fn() -> u64> Protocol for StellarProtocol<F> {
+    type Message = XdrArchive<AuthenticatedMessage>;
+    type MessageExtract = Result<HandshakeMessageExtract, StellarError>;
+    type NodeInfo = RemoteNodeInfo;
+    fn create_hello_message(&mut self) -> XdrArchive<AuthenticatedMessage> {
+        let hello = Hello {
+            ledger_version: self.node_config.node_info.ledger_version,
+            overlay_version: self.node_config.node_info.overlay_version,
+            overlay_min_version: self.node_config.node_info.overlay_min_version,
+            network_id: self.authentication.network_id(),
+            version_str: self.node_config.node_info.version_string.clone(),
+            listening_port: self.node_config.listening_port,
+            peer_id: NodeId::PublicKeyTypeEd25519(*self.authentication.keychain().persistent_public_key()),
+            cert: self.authentication.auth_cert((self.time_provider)()).clone(),
+            nonce: self.local_nonce,
+        };
+        XdrArchive(AuthenticatedMessage::V0(AuthenticatedMessageV0{message: StellarMessage::Hello(hello), mac: HmacSha256Mac::default(), sequence: self.local_sequence}))
+    }
+    fn create_auth_message(&mut self) -> XdrArchive<AuthenticatedMessage> {
+        let message = StellarMessage::Auth(Auth{flags: 100});
+        let mac = self.mac_for_authenticated_message(&message);
+        let message = XdrArchive::new(AuthenticatedMessage::V0(AuthenticatedMessageV0{message, sequence: self.local_sequence, mac}));
+        self.inc_loc_seq();
+        message
+    }
+    fn handle_message(&mut self, result: (&XdrArchive<AuthenticatedMessage>, Vec<u8>)) -> Result<HandshakeMessageExtract,StellarError> {
+        let AuthenticatedMessage::V0(message) = &result.0.0;
+        if let StellarMessage::Hello(hello) = &message.message {
+            self.authentication.verify_remote_cert((self.time_provider)(), hello.peer_id.as_binary(), &hello.cert)?;
+            self.local_sequence = [0; 8];
+            self.remote_sequence = [0; 8];
+            let remote_node_info = RemoteNodeInfo::from(hello);
+            self.sending_mac_key = Some(self.authentication.mac_key(
+                &self.local_nonce,
+                &remote_node_info.nonce,
+                &remote_node_info.public_key.key,
+                true,
+            ));
+            self.receiving_mac_key = Some(self.authentication.mac_key(
+                &self.local_nonce,
+                &remote_node_info.nonce,
+                &remote_node_info.public_key.key,
+                false,
+            ));
+            Ok(HandshakeMessageExtract::Hello)
+        } else {
+            self.verify_v0_message(message, &result.1[8..&result.1.len() - 32])?;
+            self.inc_rem_seq();
+            match &message.message {
+                StellarMessage::Auth(_) => {Ok(HandshakeMessageExtract::Auth)},
+                _ => {unreachable!()}
+            }
+        }
+    }
 }
-#[derive(Debug, Error)]
-#[error("Stellar error")]
-pub enum StellarError {
-    AuthenticationError(#[from] AuthenticationError),
-    DecodeError(#[from] DecodeError),
-    #[error("IO error: {0}")]
-    IOError(#[from] io::Error),
-    ConnectionResetByPeer,
-    ExpectedMoreMessages,
-    Verification(#[from] VerificationError),
-}
-pub enum HandshakeMessageExtract<P: Protocol> {
-    Hello(P::NodeInfo),
+
+pub enum HandshakeMessageExtract {
+    Hello,
     Auth,
 }

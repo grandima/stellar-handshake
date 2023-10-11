@@ -1,5 +1,7 @@
 use crate::connection::Connection;
-use crate::protocol::stellar_protocol::{HandshakeMessageExtract, Protocol, StellarError};
+use crate::protocol::errors::StellarError;
+use crate::protocol::protocol::Protocol;
+use crate::protocol::stellar_protocol::HandshakeMessageExtract;
 
 pub async fn execute_handshake<P: Protocol>(
     connection: &mut Connection<P>,
@@ -9,8 +11,8 @@ pub async fn execute_handshake<P: Protocol>(
     loop {
         match connection.receive().await? {
             Some(result)  => match connection.protocol().handle_message((&result.0, result.1))? {
-                HandshakeMessageExtract::Hello(node_info) => {
-                    let auth_message = connection.protocol().create_auth_message(node_info);
+                HandshakeMessageExtract::Hello => {
+                    let auth_message = connection.protocol().create_auth_message();
                     connection.send(auth_message).await?
                 }
                 HandshakeMessageExtract::Auth => {return Ok(true);}
