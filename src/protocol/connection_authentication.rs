@@ -91,7 +91,7 @@ impl ConnectionAuthentication {
             return shared_key.clone();
         }
         let mut shared_secret_key = [0u8; dryoc::constants::CRYPTO_SCALARMULT_BYTES];
-        dryoc::classic::crypto_core::crypto_scalarmult(&mut shared_secret_key, &self.per_connection_seckey, remote_public_key);
+        dryoc::classic::crypto_core::crypto_scalarmult(&mut shared_secret_key, &self.per_connection_seckey.key, remote_public_key);
         let message_to_sign = [&shared_secret_key, &self.per_connection_pubkey.key, remote_public_key.as_ref()].concat();
         let zero_salt = [0u8; SHA256_LENGTH];
         let hmac = create_sha256_hmac(&message_to_sign, &zero_salt);
@@ -124,14 +124,6 @@ impl ConnectionAuthentication {
 pub struct Curve25519Secret {
     pub key: Uint256,
 }
-
-impl Deref for Curve25519Secret {
-    type Target = Uint256;
-    fn deref(&self) -> &Self::Target {
-        &self.key
-    }
-}
-
 #[derive(Error, Debug)]
 pub enum AuthenticationError {
     #[error("Cert expired")]
