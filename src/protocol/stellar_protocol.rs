@@ -114,7 +114,7 @@ impl <F: Fn() -> u64> Protocol for StellarProtocol<F> {
             ));
             Ok(HandshakeMessageExtract::Hello)
         } else {
-            self.verify_v0_message(message, &result.1[8..&result.1.len() - 32])?;
+            self.verify_v0_message(message, &result.1[4..&result.1.len() - 32])?;
             self.inc_rem_seq();
             match &message.message {
                 StellarMessage::Auth(_) => {Ok(HandshakeMessageExtract::Auth)},

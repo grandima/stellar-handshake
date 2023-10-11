@@ -38,7 +38,7 @@ impl<P: Protocol> Connection<P> {
     pub async fn receive(&mut self) -> Result<Option<(P::Message, Vec<u8>)>, StellarError> {
         loop {
             match self.parse_message() {
-                Ok(Some(result)) => return Ok(Some((result.0, result.1.into()))),
+                Ok(Some(result)) => return Ok(Some((result.0, result.1))),
                 Ok(None) => {
                     if 0 == self.socket.read_buf(&mut self.read_buffer).await? {
                         return if self.read_buffer.is_empty() {
@@ -55,11 +55,11 @@ impl<P: Protocol> Connection<P> {
         }
     }
 
-    fn parse_message(&mut self) -> Result<Option<(P::Message, BytesMut)>, StellarError> {
+    fn parse_message(&mut self) -> Result<Option<(P::Message, Vec<u8>)>, StellarError> {
         if P::Message::has_complete_message(self.read_buffer.as_ref())? {
             let (message, size) = P::Message::decoded(self.read_buffer.as_ref())?;
             let raw_message = self.read_buffer.split_to(size);
-            Ok(Some((message, raw_message)))
+            Ok(Some((message, raw_message[4..].to_vec())))
         } else {
             Ok(None)
         }
