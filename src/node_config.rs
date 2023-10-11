@@ -1,14 +1,27 @@
 use std::net::SocketAddr;
 use std::str::FromStr;
 use crate::xdr::lengthed_array::LengthedArray;
-
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct NodeConfig {
     pub node_info: NodeInfo,
     pub ip: String,
     pub listening_port: u32,
 }
+#[allow(dead_code)]
 impl NodeConfig {
+    /// Using the public mainnet node taken from here:
+    /// https://stellarbeat.io/nodes/GAAV2GCVFLNN522ORUYFV33E76VPC22E72S75AQ6MBR5V45Z5DWVPWEU?center=1
+    pub fn mainnet() -> Self {
+        let node = NodeConfig {
+            node_info: NodeInfo::mainnet(),
+            ip: "35.233.35.143".into(),
+            listening_port: 11625,
+        };
+        println!("Connecting to MAINNET node {:?}", node.sock_addr());
+        node
+    }
+
     pub fn local() -> Self {
         NodeConfig {
             node_info: NodeInfo::local(),
@@ -20,15 +33,7 @@ impl NodeConfig {
         SocketAddr::from_str(&format!("{}:{}", self.ip, self.listening_port)).unwrap()
     }
 }
-impl Default for NodeConfig {
-    fn default() -> Self {
-        NodeConfig {
-            node_info: NodeInfo::default(),
-            ip: "35.233.35.143".into(),
-            listening_port: 11625,
-        }
-    }
-}
+
 #[derive(Debug, Clone)]
 pub struct NodeInfo {
     pub ledger_version: u32,
@@ -37,6 +42,7 @@ pub struct NodeInfo {
     pub version_string: LengthedArray,
     pub network_id: String,
 }
+#[allow(dead_code)]
 impl NodeInfo {
     fn local() -> Self {
         Self {
@@ -47,9 +53,7 @@ impl NodeInfo {
             network_id: "Test SDF Network ; September 2015".to_string(),
         }
     }
-}
-impl Default for NodeInfo {
-    fn default() -> Self {
+    fn mainnet() -> Self {
         Self {
             ledger_version: 19,
             overlay_version: 29,

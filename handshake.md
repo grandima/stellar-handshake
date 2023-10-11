@@ -1,7 +1,14 @@
 
-# Stellar Handshake Process
+# Stellar node handshake process
 
-The handshake process in Stellar involves establishing a TCP connection and subsequently exchanging "Hello" and "Auth" messages.
+The purpose of this document is to provide a pseudo-code explanation.
+
+Since there's no documentation on the handshake process, the source of truth is the original code:  
+https://github.com/stellar/stellar-core/blob/master/src/overlay/Peer.h
+
+The handshake process between Stellar nodes involves establishing a TCP connection and subsequently exchanging "Hello" and "Auth" messages.
+
+
 
 ## Initial Setup:
 

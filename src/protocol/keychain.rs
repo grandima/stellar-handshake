@@ -13,9 +13,13 @@ pub struct Keychain {
 }
 
 impl Keychain {
+    pub fn from_random_seed() -> Self {
+        let seed = generate_secret_key();
+        Self::from(&seed)
+    }
     pub fn sign(&self, message: impl AsRef<[u8]>) -> Uint512 {
         let mut signature = [0u8; ED25519_SECRET_KEY_BYTE_LENGTH];
-        crypto_sign_detached(&mut signature, message.as_ref(), &self.signing_key).unwrap();
+        crypto_sign_detached(&mut signature, message.as_ref(), &self.signing_key).unwrap_or_default();
         signature
     }
     pub fn persistent_public_key(&self) -> &Uint256 {
@@ -23,11 +27,6 @@ impl Keychain {
     }
 }
 
-impl Default for Keychain {
-    fn default() -> Self {
-        Self::from(&generate_secret_key())
-    }
-}
 impl TryFrom<&str> for Keychain {
     type Error = KeychainError;
     fn try_from(key: &str) -> Result<Self, Self::Error> {

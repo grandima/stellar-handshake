@@ -22,8 +22,8 @@ use crate::utils::misc::{generate_nonce, get_current_u64_milliseconds};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
-    let keychain = Keychain::default();
-    let node_config = NodeConfig::local();
+    let keychain = Keychain::from_random_seed();
+    let node_config = NodeConfig::mainnet();
     let mut per_connection_secret_key = [0u8; SEED_LENGTH];
     copy_randombytes(&mut per_connection_secret_key);
     let authentication = ConnectionAuthentication::new(keychain, &node_config.node_info.network_id, per_connection_secret_key);
@@ -35,6 +35,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
 async fn on_server_connection<P: Protocol>(server_connection: &mut Connection<P>) {
     let negotiated = execute_handshake(server_connection).await;
-    println!("result: {:?}", negotiated);
+    println!("Handshake result: {:?}", negotiated);
 }
 

@@ -14,19 +14,20 @@ use crate::xdr::xdr_codable::XdrCodable;
 
 #[derive(Debug)]
 pub struct ConnectionAuthentication {
-    we_called_remote_keys: HashMap<Uint256, Vec<u8>>,
-    us_called_remote_keys: HashMap<Uint256, Vec<u8>>,
     keychain: Keychain,
     network_id: Uint256,
     per_connection_seckey: Curve25519Secret,
     per_connection_pubkey: Curve25519Public,
+    /// We don't need to store them for handshake process, but if we want to send more and receive more messages, we need to store them.
+    we_called_remote_keys: HashMap<Uint256, Vec<u8>>,
+    us_called_remote_keys: HashMap<Uint256, Vec<u8>>,
     auth_cert: Option<AuthCert>,
     auth_cert_expiration: u64,
 }
 
 impl ConnectionAuthentication {
     // value taken from original code
-    const  AUTH_EXPIRATION_LIMIT: u64 = 360000;
+    const  AUTH_EXPIRATION_LIMIT: u64 = 3600000;
     pub fn new(keypair: Keychain, network_id: impl AsRef<[u8]>, per_connection_secret_key: [u8; SEED_LENGTH]) -> Self {
         let hashed_network_id = create_sha256(network_id.as_ref());
         let mut public_key_ecdh = [0u8; PUBLIC_KEY_LENGTH];
@@ -42,11 +43,20 @@ impl ConnectionAuthentication {
             auth_cert_expiration: 0
         }
     }
-
-    pub fn verify_remote_cert(&self,
-                              time: u64,
-                              remote_public_key: &Uint256,
-                              cert: &AuthCert
+    pub fn auth_cert(&mut self, milisec: u64) -> &AuthCert {
+        let cert = match self.auth_cert.take() {
+            Some(cert) if self.auth_cert_expiration >= milisec => cert,
+            _ => {
+                self.create_auth_cert_from_milisec(milisec)
+            },
+        };
+        self.auth_cert = Some(cert);
+        self.auth_cert.as_ref().unwrap()
+    }
+    pub fn verify_cert(&self,
+                       time: u64,
+                       remote_public_key: &Uint256,
+                       cert: &AuthCert
     ) -> Result<(),AuthenticationError> {
         let expiration = cert.expiration;
         if expiration < (time / 1000) {
@@ -60,7 +70,7 @@ impl ConnectionAuthentication {
         sig.copy_from_slice(&cert.sig);
         crypto_sign_verify_detached(&sig, &hashed, remote_public_key).map_err(|_| AuthenticationError::VerificationSignature)
     }
-
+    /// `we_called_remote` parameter can be replaced with enum for a better readability and data-driven approach
     pub fn mac_key(&mut self,
                           local_nonce: &Uint256,
                           remote_nonce: &Uint256,
@@ -87,17 +97,6 @@ impl ConnectionAuthentication {
         let hmac = create_sha256_hmac(&message_to_sign, &zero_salt);
         keys_storage.insert(*remote_public_key, hmac.clone());
         hmac
-    }
-
-    pub fn auth_cert(&mut self, milisec: u64) -> &AuthCert {
-        let cert = match self.auth_cert.take() {
-            Some(cert) if self.auth_cert_expiration >= milisec => cert,
-            _ => {
-                self.create_auth_cert_from_milisec(milisec)
-            },
-        };
-        self.auth_cert = Some(cert);
-        self.auth_cert.as_ref().unwrap()
     }
     fn create_auth_cert_from_milisec(&mut self, milisec: u64) -> AuthCert {
         self.auth_cert_expiration = milisec + Self::AUTH_EXPIRATION_LIMIT;
