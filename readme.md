@@ -17,9 +17,9 @@ What's not included:
 2. When the Stellar Node, not the app is the one who initializes a connection.
 2. Handling `Error` as well as any other messages from node.
 3. Reading the configuration from file. The configuration constants are hardcoded as `mainnet` and `local`, but it's easy to add your own config.
-4. Logging 
+4. Logging.
 5. Timeout for waiting for messages from TCP.
 6. Running a tcp connection in a separate task.
-7. Code comments
+7. Code comments.
 
-Upon request, it's possible to provide the details on how to run a local stellar node to actually read the logs from it.
+Upon request, it's possible to provide the details on how to run a local stellar node to actually read the logs from it or implement all the above features.
