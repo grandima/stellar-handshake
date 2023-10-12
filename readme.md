@@ -1,6 +1,5 @@
 
-### Stellar node handshake process implemented in Rust.
-
+### Connector to the Stellar Node in Rust
 
 [Stellar blockchain node source code](
 https://github.com/stellar/stellar-core)
@@ -15,11 +14,12 @@ To understand the handshake process, refer to [handshake](handshake.md) in the r
 
 What's not included:
 1. Unit tests. The code is written to be easily unit-tested because it eliminates all random dependencies.
+2. When the Stellar Node, not the app is the one who initializes a connection.
 2. Handling `Error` as well as any other messages from node.
-   3. Reading the configuration from file. The configuration constants are hardcoded as `mainnet` and `local`, but it's easy to add your own config.
-3. Logging
-4. Timeout for waiting for messages from TCP. 
-5. Running a tcp connection in a separate task.
-6. Code comments
+3. Reading the configuration from file. The configuration constants are hardcoded as `mainnet` and `local`, but it's easy to add your own config.
+4. Logging 
+5. Timeout for waiting for messages from TCP.
+6. Running a tcp connection in a separate task.
+7. Code comments
 
 Upon request, it's possible to provide the details on how to run a local stellar node to actually read the logs from it.
