@@ -1,6 +1,5 @@
 pub mod connection_authentication;
 pub mod keychain;
-pub mod public_key;
 pub mod remote_node_info;
 pub mod stellar_protocol;
 pub mod errors;
