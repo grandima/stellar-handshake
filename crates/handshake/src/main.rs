@@ -3,7 +3,6 @@ mod connection;
 mod handshake;
 
 use protocol::node_config::NodeConfig;
-use xdr::constants::SEED_LENGTH;
 use std::error::Error;
 
 
@@ -21,7 +20,7 @@ use utils::misc::{generate_nonce, get_current_u64_milliseconds};
 async fn main() -> Result<(), Box<dyn Error>> {
     let keychain = Keychain::from_random_seed();
     let node_config = NodeConfig::mainnet();
-    let mut per_connection_secret_key = [0u8; SEED_LENGTH];
+    let mut per_connection_secret_key = [0u8; 32];
     copy_randombytes(&mut per_connection_secret_key);
     let authentication = ConnectionAuthentication::new(keychain, &node_config.node_info.network_id, per_connection_secret_key);
     let protocol = StellarProtocol::new(node_config.clone(), generate_nonce(), authentication, get_current_u64_milliseconds);

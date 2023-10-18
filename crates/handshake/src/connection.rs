@@ -5,7 +5,6 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 use protocol::errors::StellarError;
 use protocol::protocol::{Protocol, ProtocolMessage};
-use xdr::xdr_codable::XdrCodable;
 use anyhow::Result;
 pub struct Connection<P: Protocol> {
     protocol: P,

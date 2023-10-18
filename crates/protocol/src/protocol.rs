@@ -18,6 +18,12 @@ pub trait Protocol: Sized {
 
 pub trait ProtocolMessage: XdrCodable + Sized {
     fn has_complete_message(buf: &[u8]) -> Result<bool>;
+    fn decoded<T: AsRef<[u8]>>(bytes: T) -> Result<(Self, usize)> {
+        Ok(<Self as XdrCodable>::decoded(bytes)?)
+    }
+    fn encoded(&self) -> Vec<u8> {
+        <Self as XdrCodable>::encoded(self)
+    }
 }
 
 impl <T: XdrCodable> ProtocolMessage for XdrArchive<T> {

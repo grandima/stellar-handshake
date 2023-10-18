@@ -16,5 +16,4 @@ anyhow = {workspace = true}
 tokio = {workspace = true}
 bytes = {workspace = true}
 utils = {path = "../utils" }
-xdr = {path = "../xdr" }
 protocol = {path = "../protocol" }

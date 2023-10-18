@@ -224,7 +224,6 @@ dependencies = [
  "thiserror",
  "tokio",
  "utils",
- "xdr",
 ]
 
 [[package]]
