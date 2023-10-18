@@ -3,14 +3,14 @@ use std::collections::HashMap;
 
 use super::keychain::Keychain;
 use dryoc::classic::crypto_core::crypto_scalarmult_base;
-use crate::xdr::auth_cert::{AuthCert, Curve25519Public};
+use xdr::auth_cert::{AuthCert, Curve25519Public};
 
 use dryoc::classic::crypto_sign::crypto_sign_verify_detached;
 use thiserror::Error;
-use crate::utils::sha2::{create_sha256, create_sha256_hmac};
-use crate::xdr::constants::{PUBLIC_KEY_LENGTH, SEED_LENGTH, SHA256_LENGTH};
-use crate::xdr::types::{EnvelopeType, Signature, Uint256};
-use crate::xdr::xdr_codable::XdrCodable;
+use utils::sha2::{create_sha256, create_sha256_hmac};
+use xdr::constants::{PUBLIC_KEY_LENGTH, SEED_LENGTH, SHA256_LENGTH};
+use xdr::types::{EnvelopeType, Signature, Uint256};
+use xdr::xdr_codable::XdrCodable;
 
 #[derive(Debug)]
 pub struct ConnectionAuthentication {

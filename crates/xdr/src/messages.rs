@@ -1,8 +1,8 @@
-use crate::xdr::auth_cert::AuthCert;
-use crate::xdr::lengthed_array::LengthedArray;
-use crate::xdr::streams::{DecodeError, ReadStream, WriteStream};
-use crate::xdr::types::{HmacSha256Mac, MessageType, NodeId, Uint256, Uint64};
-use crate::xdr::xdr_codable::XdrCodable;
+use crate::auth_cert::AuthCert;
+use crate::lengthed_array::LengthedArray;
+use crate::streams::{DecodeError, ReadStream, WriteStream};
+use crate::types::{HmacSha256Mac, MessageType, NodeId, Uint256, Uint64};
+use crate::xdr_codable::XdrCodable;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Auth {

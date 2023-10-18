@@ -1,6 +1,6 @@
-use crate::xdr::auth_cert::Curve25519Public;
-use crate::xdr::messages::Hello;
-use crate::xdr::types::Uint256;
+use xdr::auth_cert::Curve25519Public;
+use xdr::messages::Hello;
+use xdr::types::Uint256;
 
 #[derive(Clone)]
 pub struct RemoteNodeInfo {

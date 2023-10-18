@@ -1,11 +1,11 @@
 use crate::connection::Connection;
-use crate::protocol::errors::StellarError;
-use crate::protocol::protocol::Protocol;
-use crate::protocol::stellar_protocol::HandshakeMessageExtract;
-
+use protocol::protocol::Protocol;
+use protocol::protocol::HandshakeMessageExtract;
+use anyhow::Result;
+use protocol::errors::StellarError;
 pub async fn execute_handshake<P: Protocol>(
     connection: &mut Connection<P>,
-) -> Result<bool, StellarError> {
+) -> Result<bool> {
     let message = connection.protocol().create_hello_message();
     connection.send(message).await?;
     loop {
@@ -18,7 +18,7 @@ pub async fn execute_handshake<P: Protocol>(
                 HandshakeMessageExtract::Auth => {return Ok(true);}
             },
             None => {
-                return Err(StellarError::ExpectedMoreMessages);
+                return Err(StellarError::ExpectedMoreMessages.into());
             }
         }
     }

@@ -1,24 +1,21 @@
 
-mod node_config;
-mod xdr;
-mod utils;
 mod connection;
 mod handshake;
-mod protocol;
 
-use node_config::NodeConfig;
-use crate::xdr::constants::SEED_LENGTH;
+use protocol::node_config::NodeConfig;
+use xdr::constants::SEED_LENGTH;
 use std::error::Error;
 
 
 use dryoc::rng::copy_randombytes;
 use protocol::protocol::Protocol;
-use crate::connection::Connection;
+use connection::Connection;
 use crate::handshake::execute_handshake;
-use crate::protocol::connection_authentication::ConnectionAuthentication;
-use crate::protocol::keychain::Keychain;
-use crate::protocol::stellar_protocol::StellarProtocol;
-use crate::utils::misc::{generate_nonce, get_current_u64_milliseconds};
+use protocol::connection_authentication::ConnectionAuthentication;
+use protocol::keychain::Keychain;
+use protocol::stellar_protocol::StellarProtocol;
+use utils::misc::{generate_nonce, get_current_u64_milliseconds};
+
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {

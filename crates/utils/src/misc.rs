@@ -1,8 +1,8 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 use dryoc::rng::{randombytes_buf};
-use crate::utils::sha2::{create_sha256};
-use crate::xdr::types::Uint256;
+use crate::sha2::{create_sha256, Uint256};
 use dryoc::dryocbox::ByteArray;
+
 pub fn generate_secret_key() -> Uint256 {
     let keypair = dryoc::keypair::KeyPair::gen_with_defaults();
     let secretkey = *keypair.secret_key.as_array();

@@ -3,9 +3,9 @@ use dryoc::classic::crypto_sign::{crypto_sign_detached, crypto_sign_seed_keypair
 use dryoc::dryocbox::ByteArray;
 
 
-use crate::utils::misc::generate_secret_key;
-use crate::xdr::constants::{ED25519_SECRET_KEY_BYTE_LENGTH, SEED_LENGTH};
-use crate::xdr::types::{PublicKey, Uint256, Uint512};
+use utils::misc::generate_secret_key;
+use xdr::constants::{ED25519_SECRET_KEY_BYTE_LENGTH, SEED_LENGTH};
+use xdr::types::{PublicKey, Uint256, Uint512};
 #[derive(Debug, Clone)]
 pub struct Keychain {
     persistent_public_key: PublicKey,

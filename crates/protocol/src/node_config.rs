@@ -1,6 +1,6 @@
 use std::net::SocketAddr;
 use std::str::FromStr;
-use crate::xdr::lengthed_array::LengthedArray;
+use xdr::lengthed_array::LengthedArray;
 #[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct NodeConfig {
@@ -29,7 +29,7 @@ impl NodeConfig {
             listening_port: 11625,
         }
     }
-    pub(crate) fn sock_addr(&self) -> SocketAddr {
+    pub fn sock_addr(&self) -> SocketAddr {
         SocketAddr::from_str(&format!("{}:{}", self.ip, self.listening_port)).unwrap()
     }
 }

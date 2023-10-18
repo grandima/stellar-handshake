@@ -1,8 +1,8 @@
 use ring::{hmac};
 
 use ring::digest::{Context, SHA256};
-use crate::xdr::types::Uint256;
 
+pub(crate) type Uint256 = [u8; 32];
 pub fn create_sha256_hmac(data: &[u8], mac_key: &[u8]) -> Vec<u8> {
     let key = hmac::Key::new(hmac::HMAC_SHA256, mac_key);
     let signature = hmac::sign(&key, data);

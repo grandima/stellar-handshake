@@ -1,8 +1,8 @@
 
-use crate::xdr::lengthed_array::LengthedArray;
+use crate::lengthed_array::LengthedArray;
 
-use crate::xdr::streams::{DecodeError, ReadStream, WriteStream};
-use crate::xdr::xdr_codable::XdrCodable;
+use crate::streams::{DecodeError, ReadStream, WriteStream};
+use crate::xdr_codable::XdrCodable;
 
 #[derive(Debug)]
 pub struct XdrArchive<T: XdrCodable> (pub T);
@@ -121,6 +121,14 @@ impl XdrCodable for PublicKey {
         match PublicKeyType::decode(read_stream)? {
             PublicKeyType::PublicKeyTypeEd25519 =>
                 Ok(PublicKey::PublicKeyTypeEd25519(Uint256::decode(read_stream)?)),
+        }
+    }
+}
+
+impl PublicKey {
+    pub fn as_binary(&self) -> &Uint256 {
+        match self {
+            PublicKey::PublicKeyTypeEd25519(key) => key,
         }
     }
 }

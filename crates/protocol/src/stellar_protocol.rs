@@ -1,20 +1,20 @@
 
-use crate::protocol::connection_authentication::ConnectionAuthentication;
+use crate::connection_authentication::ConnectionAuthentication;
 use crate::node_config::NodeConfig;
-use crate::protocol::errors::{StellarError, VerificationError};
-use crate::protocol::remote_node_info::RemoteNodeInfo;
-use crate::protocol::errors::VerificationError::{MacKey, SequenceMismatch};
-use crate::protocol::protocol::Protocol;
-use crate::utils::misc::increase_buffer_by_one;
+use crate::errors::{StellarError, VerificationError};
+use crate::remote_node_info::RemoteNodeInfo;
+use crate::errors::VerificationError::{MacKey, SequenceMismatch};
+use crate::protocol::Protocol;
+use utils::misc::increase_buffer_by_one;
+use crate::protocol::HandshakeMessageExtract;
+use utils::sha2::{create_sha256_hmac, verify_sha256_hmac};
 
-use crate::utils::sha2::{create_sha256_hmac, verify_sha256_hmac};
+use xdr::constants::SHA256_LENGTH;
+use xdr::messages::{Auth, AuthenticatedMessage, AuthenticatedMessageV0, Hello, StellarMessage};
 
-use crate::xdr::constants::SHA256_LENGTH;
-use crate::xdr::messages::{Auth, AuthenticatedMessage, AuthenticatedMessageV0, Hello, StellarMessage};
-
-use crate::xdr::types::{HmacSha256Mac, NodeId, Uint256, Uint64, XdrArchive};
-use crate::xdr::xdr_codable::XdrCodable;
-
+use xdr::types::{HmacSha256Mac, NodeId, Uint256, Uint64, XdrArchive};
+use xdr::xdr_codable::XdrCodable;
+use anyhow::Result;
 pub struct StellarProtocol<F: Fn() -> u64> {
     node_config: NodeConfig,
     authentication: ConnectionAuthentication,
@@ -93,7 +93,7 @@ impl <F: Fn() -> u64> Protocol for StellarProtocol<F> {
         self.inc_loc_seq();
         message
     }
-    fn handle_message(&mut self, result: (&XdrArchive<AuthenticatedMessage>, Vec<u8>)) -> Result<HandshakeMessageExtract,StellarError> {
+    fn handle_message(&mut self, result: (&XdrArchive<AuthenticatedMessage>, Vec<u8>)) -> Result<HandshakeMessageExtract> {
         let AuthenticatedMessage::V0(message) = &result.0.0;
         if let StellarMessage::Hello(hello) = &message.message {
             self.authentication.verify_cert((self.time_provider)(), hello.peer_id.as_binary(), &hello.cert)?;
@@ -122,9 +122,4 @@ impl <F: Fn() -> u64> Protocol for StellarProtocol<F> {
             }
         }
     }
-}
-
-pub enum HandshakeMessageExtract {
-    Hello,
-    Auth,
 }

@@ -1,0 +1,20 @@
+[package]
+name = "handshake"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "handshake"
+path = "src/main.rs"
+
+[dependencies]
+dryoc = { workspace = true }
+ring = { workspace = true }
+thiserror = {workspace = true}
+data-encoding = {workspace = true}
+anyhow = {workspace = true}
+tokio = {workspace = true}
+bytes = {workspace = true}
+utils = {path = "../utils" }
+xdr = {path = "../xdr" }
+protocol = {path = "../protocol" }

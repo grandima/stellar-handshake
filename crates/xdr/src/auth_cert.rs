@@ -1,7 +1,7 @@
 
-use crate::xdr::streams::{DecodeError, ReadStream, WriteStream};
-use crate::xdr::types::{Signature, Uint256};
-use crate::xdr::xdr_codable::XdrCodable;
+use crate::streams::{DecodeError, ReadStream, WriteStream};
+use crate::types::{Signature, Uint256};
+use crate::xdr_codable::XdrCodable;
 #[derive(Debug, Clone)]
 pub struct AuthCert {
     pub persistent_public_key: Curve25519Public,
