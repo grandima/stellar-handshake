@@ -2,14 +2,14 @@ use crate::auth_cert::AuthCert;
 use crate::lengthed_array::LengthedArray;
 use crate::streams::{DecodeError, ReadStream, WriteStream};
 use crate::types::{HmacSha256Mac, MessageType, NodeId, Uint256, Uint64};
-use crate::xdr_codable::XdrCodable;
+use crate::xdr_codec::XdrCodec;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Auth {
     pub flags: u32,
 }
 
-impl XdrCodable for Auth {
+impl XdrCodec for Auth {
     fn encode(&self, write_stream: &mut WriteStream) {
         self.flags.encode(write_stream);
     }
@@ -31,7 +31,7 @@ pub struct Hello {
     pub cert: AuthCert,
     pub nonce: Uint256,
 }
-impl XdrCodable for Hello {
+impl XdrCodec for Hello {
     fn encode(&self, write_stream: &mut WriteStream) {
         self.ledger_version.encode(write_stream);
         self.overlay_version.encode(write_stream);
@@ -48,7 +48,7 @@ impl XdrCodable for Hello {
         let ledger_version = u32::decode(read_stream)?;
         let overlay_version = u32::decode(read_stream)?;
         let overlay_min_version = u32::decode(read_stream)?;
-        let network_id: Uint256 = XdrCodable::decode(read_stream)?;
+        let network_id: Uint256 = XdrCodec::decode(read_stream)?;
         let version_str = LengthedArray::decode(read_stream)?;
         let listening_port =  u32::decode(read_stream)?;
         let peer_id = NodeId::decode(read_stream)?;
@@ -69,7 +69,7 @@ impl XdrCodable for Hello {
 pub enum AuthenticatedMessage {
     V0(AuthenticatedMessageV0),
 }
-impl XdrCodable for AuthenticatedMessage {
+impl XdrCodec for AuthenticatedMessage {
     fn encode(&self, write_stream: &mut WriteStream) {
         match self {
             AuthenticatedMessage::V0(value) => {
@@ -94,7 +94,7 @@ pub struct AuthenticatedMessageV0 {
     pub mac: HmacSha256Mac,
 }
 
-impl XdrCodable for AuthenticatedMessageV0 {
+impl XdrCodec for AuthenticatedMessageV0 {
     fn encode(&self, write_stream: &mut WriteStream) {
         self.sequence.encode(write_stream);
         self.message.encode(write_stream);
@@ -114,7 +114,7 @@ pub enum StellarMessage {
     Hello(Hello),
     Auth(Auth),
 }
-impl XdrCodable for StellarMessage {
+impl XdrCodec for StellarMessage {
     fn encode(&self, write_stream: &mut WriteStream) {
         match self {
             StellarMessage::Hello(value) => {

@@ -3,21 +3,20 @@ use std::collections::HashMap;
 
 use super::keychain::Keychain;
 use dryoc::classic::crypto_core::crypto_scalarmult_base;
-use xdr::auth_cert::{AuthCert, Curve25519Public};
-
+use xdr::types::*;
 use dryoc::classic::crypto_sign::crypto_sign_verify_detached;
 use thiserror::Error;
+use xdr::XdrCodec;
 use utils::sha2::{create_sha256, create_sha256_hmac};
-use xdr::constants::{PUBLIC_KEY_LENGTH, SEED_LENGTH, SHA256_LENGTH};
-use xdr::types::{EnvelopeType, Signature, Uint256};
-use xdr::xdr_codable::XdrCodable;
+use crate::constants::{PUBLIC_KEY_LENGTH, SEED_LENGTH, SHA256_LENGTH};
+
 
 #[derive(Debug)]
 pub struct ConnectionAuthentication {
     keychain: Keychain,
-    network_id: Uint256,
+    network_id: xdr::types::Uint256,
     per_connection_seckey: Curve25519Secret,
-    per_connection_pubkey: Curve25519Public,
+    per_connection_pubkey: xdr::types::Curve25519Public,
     /// We don't need to store them for handshake process, but if we want to send more and receive more messages, we need to store them.
     we_called_remote_keys: HashMap<Uint256, Vec<u8>>,
     us_called_remote_keys: HashMap<Uint256, Vec<u8>>,
@@ -63,11 +62,11 @@ impl ConnectionAuthentication {
             return Err(AuthenticationError::VerificationCertExpired)
         }
         let _signature_data = self.network_id.to_vec();
-        let signature_data = [self.network_id.as_slice(), EnvelopeType::Auth.encoded().as_slice(), &cert.expiration.to_be_bytes(), &cert.persistent_public_key.key].concat();
+        let signature_data = [self.network_id.as_slice(), EnvelopeType::EnvelopeTypeAuth.encoded().as_slice(), &cert.expiration.to_be_bytes(), &cert.pubkey.key].concat();
         let hashed = create_sha256(&signature_data);
 
         let mut sig = [0u8; 64];
-        sig.copy_from_slice(&cert.sig);
+        sig.copy_from_slice(cert.sig.get_vec());
         crypto_sign_verify_detached(&sig, &hashed, remote_public_key).map_err(|_| AuthenticationError::VerificationSignature)
     }
     /// `we_called_remote` parameter can be replaced with enum for a better readability and data-driven approach
@@ -101,12 +100,12 @@ impl ConnectionAuthentication {
     fn create_auth_cert_from_milisec(&mut self, milisec: u64) -> AuthCert {
         self.auth_cert_expiration = milisec + Self::AUTH_EXPIRATION_LIMIT;
         let bytes_expiration = self.auth_cert_expiration.to_be_bytes();
-        let signature_data = [self.network_id.as_slice(), EnvelopeType::Auth.encoded().as_slice(), &bytes_expiration, &self.per_connection_pubkey.key].concat();
+        let signature_data = [self.network_id.as_slice(), EnvelopeType::EnvelopeTypeAuth.encoded().as_slice(), &bytes_expiration, &self.per_connection_pubkey.key].concat();
         let hashed_signature_data = create_sha256(&signature_data);
         let signed = self.keychain.sign(hashed_signature_data);
-        let sig = Signature::new(signed.to_vec());
+        let sig = Signature::new(signed.to_vec()).unwrap();
         AuthCert {
-            persistent_public_key: self.per_connection_pubkey.clone(),
+            pubkey: self.per_connection_pubkey.clone(),
             expiration: self.auth_cert_expiration,
             sig
         }
@@ -120,10 +119,7 @@ impl ConnectionAuthentication {
 }
 
 
-#[derive(Debug)]
-pub struct Curve25519Secret {
-    pub key: Uint256,
-}
+
 #[derive(Error, Debug)]
 pub enum AuthenticationError {
     #[error("Cert expired")]

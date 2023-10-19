@@ -1,10 +1,8 @@
 use std::error::Error;
 use anyhow::Result;
 
-use xdr::streams::ReadStream;
-use xdr::types::{XdrArchive};
-use xdr::xdr_codable::XdrCodable;
-
+use xdr::compound_types::XdrArchive;
+use xdr::{ReadStream, XdrCodec};
 trait StellarError: Error + Sized {}
 
 pub trait Protocol: Sized {
@@ -16,22 +14,22 @@ pub trait Protocol: Sized {
     fn handle_message(&mut self, message: (&Self::Message, Vec<u8>)) -> Result<HandshakeMessageExtract>;
 }
 
-pub trait ProtocolMessage: XdrCodable + Sized {
+pub trait ProtocolMessage: XdrCodec + Sized {
     fn has_complete_message(buf: &[u8]) -> Result<bool>;
     fn decoded<T: AsRef<[u8]>>(bytes: T) -> Result<(Self, usize)> {
-        Ok(<Self as XdrCodable>::decoded(bytes)?)
+        Ok(<Self as XdrCodec>::decoded(bytes).unwrap())
     }
     fn encoded(&self) -> Vec<u8> {
-        <Self as XdrCodable>::encoded(self)
+        <Self as XdrCodec>::encoded(self)
     }
 }
 
-impl <T: XdrCodable> ProtocolMessage for XdrArchive<T> {
+impl <T: XdrCodec> ProtocolMessage for XdrArchive<T> {
     fn has_complete_message(buf: &[u8]) -> Result<bool> {
         if buf.len() < 4 {
             return Ok(false);
         }
-        let length = ReadStream::new(buf).read_length(true)? ;
+        let length = ReadStream::new(buf).read_length(true).unwrap() ;
         Ok(length + 4 <= buf.len())
     }
 }

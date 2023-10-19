@@ -1,6 +1,6 @@
 use std::ops::Deref;
 use crate::streams::{DecodeError, ReadStream, WriteStream};
-use crate::xdr_codable::XdrCodable;
+use crate::xdr_codec::XdrCodec;
 #[derive(Debug, Clone)]
 pub struct LengthedArray(Vec<u8>);
 impl LengthedArray {
@@ -22,7 +22,7 @@ impl From<&str> for LengthedArray {
     }
 }
 
-impl XdrCodable for LengthedArray {
+impl XdrCodec for LengthedArray {
     fn encode(&self, write_stream: &mut WriteStream) {
         write_stream.write_u32(self.0.len() as u32);
         write_stream.write_binary_data(&self.0[..]);

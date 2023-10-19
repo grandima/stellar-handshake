@@ -1,6 +1,7 @@
 use std::net::SocketAddr;
 use std::str::FromStr;
-use xdr::lengthed_array::LengthedArray;
+use xdr::compound_types::LimitedString;
+
 #[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct NodeConfig {
@@ -39,7 +40,7 @@ pub struct NodeInfo {
     pub ledger_version: u32,
     pub overlay_version: u32,
     pub overlay_min_version: u32,
-    pub version_string: LengthedArray,
+    pub version_string: LimitedString<100>,
     pub network_id: String,
 }
 #[allow(dead_code)]
@@ -49,7 +50,7 @@ impl NodeInfo {
             ledger_version: 19,
             overlay_version: 29,
             overlay_min_version: 27,
-            version_string: "v19.13.0".try_into().unwrap(),
+            version_string: LimitedString::new("v19.13.0".into()).unwrap(),
             network_id: "Test SDF Network ; September 2015".to_string(),
         }
     }

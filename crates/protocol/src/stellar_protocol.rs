@@ -9,19 +9,19 @@ use utils::misc::increase_buffer_by_one;
 use crate::protocol::HandshakeMessageExtract;
 use utils::sha2::{create_sha256_hmac, verify_sha256_hmac};
 
-use xdr::constants::SHA256_LENGTH;
-use xdr::messages::{Auth, AuthenticatedMessage, AuthenticatedMessageV0, Hello, StellarMessage};
-
-use xdr::types::{HmacSha256Mac, NodeId, Uint256, Uint64, XdrArchive};
-use xdr::xdr_codable::XdrCodable;
+use xdr::types::*;
 use anyhow::Result;
+use xdr::compound_types::XdrArchive;
+use xdr::XdrCodec;
+use crate::constants::SHA256_LENGTH;
+
 pub struct StellarProtocol<F: Fn() -> u64> {
     node_config: NodeConfig,
     authentication: ConnectionAuthentication,
     local_nonce: Uint256,
     /// We don't need to store them for handshake process, but if we want to send more and receive more messages, we need to store them
-    local_sequence: Uint64,
-    remote_sequence: Uint64,
+    local_sequence: [u8; 8],
+    remote_sequence: [u8; 8],
     sending_mac_key: Option<Vec<u8>>,
     receiving_mac_key: Option<Vec<u8>>,
     time_provider: F
@@ -79,22 +79,25 @@ impl <F: Fn() -> u64> Protocol for StellarProtocol<F> {
             overlay_min_version: self.node_config.node_info.overlay_min_version,
             network_id: self.authentication.network_id(),
             version_str: self.node_config.node_info.version_string.clone(),
-            listening_port: self.node_config.listening_port,
+            listening_port: self.node_config.listening_port as i32,
             peer_id: NodeId::PublicKeyTypeEd25519(*self.authentication.keychain().persistent_public_key()),
             cert: self.authentication.auth_cert((self.time_provider)()).clone(),
             nonce: self.local_nonce,
         };
-        XdrArchive(AuthenticatedMessage::V0(AuthenticatedMessageV0{message: StellarMessage::Hello(hello), mac: HmacSha256Mac::default(), sequence: self.local_sequence}))
+        let message = AuthenticatedMessage::V0(AuthenticatedMessageV0{message: StellarMessage::Hello(hello), mac: HmacSha256Mac{mac: [0; 32]}, sequence: self.local_sequence});
+        XdrArchive(vec![message])
     }
     fn create_auth_message(&mut self) -> XdrArchive<AuthenticatedMessage> {
         let message = StellarMessage::Auth(Auth{flags: 100});
         let mac = self.mac_for_authenticated_message(&message);
-        let message = XdrArchive::new(AuthenticatedMessage::V0(AuthenticatedMessageV0{message, sequence: self.local_sequence, mac}));
+        let message = XdrArchive::new(vec![AuthenticatedMessage::V0(AuthenticatedMessageV0{message, sequence: self.local_sequence, mac})]);
         self.inc_loc_seq();
         message
     }
     fn handle_message(&mut self, result: (&XdrArchive<AuthenticatedMessage>, Vec<u8>)) -> Result<HandshakeMessageExtract> {
-        let AuthenticatedMessage::V0(message) = &result.0.0;
+        let binding = result.0.0.first();
+        let AuthenticatedMessage::V0(message) = &binding.unwrap()
+            else { todo!() };
         if let StellarMessage::Hello(hello) = &message.message {
             self.authentication.verify_cert((self.time_provider)(), hello.peer_id.as_binary(), &hello.cert)?;
             self.local_sequence = [0; 8];

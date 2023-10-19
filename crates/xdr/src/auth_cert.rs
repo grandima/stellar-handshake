@@ -1,7 +1,7 @@
 
 use crate::streams::{DecodeError, ReadStream, WriteStream};
 use crate::types::{Signature, Uint256};
-use crate::xdr_codable::XdrCodable;
+use crate::xdr_codec::XdrCodec;
 #[derive(Debug, Clone)]
 pub struct AuthCert {
     pub persistent_public_key: Curve25519Public,
@@ -9,7 +9,7 @@ pub struct AuthCert {
     pub sig: Signature,
 }
 
-impl XdrCodable for AuthCert {
+impl XdrCodec for AuthCert {
     fn encode(&self, write_stream: &mut WriteStream) {
         self.persistent_public_key.encode(write_stream);
         self.expiration.encode(write_stream);
@@ -29,7 +29,7 @@ impl XdrCodable for AuthCert {
 pub struct Curve25519Public {
     pub key: Uint256,
 }
-impl XdrCodable for Curve25519Public {
+impl XdrCodec for Curve25519Public {
     fn encode(&self, write_stream: &mut WriteStream) {
         self.key.encode(write_stream);
     }

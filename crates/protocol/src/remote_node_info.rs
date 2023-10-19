@@ -1,6 +1,5 @@
-use xdr::auth_cert::Curve25519Public;
-use xdr::messages::Hello;
-use xdr::types::Uint256;
+use xdr::types::*;
+
 
 #[derive(Clone)]
 pub struct RemoteNodeInfo {
@@ -11,7 +10,7 @@ pub struct RemoteNodeInfo {
 impl From<&Hello> for RemoteNodeInfo {
     fn from(hello: &Hello) -> Self {
         let remote_nonce = hello.nonce;
-        let remote_public_key = hello.cert.persistent_public_key.key;
+        let remote_public_key = hello.cert.pubkey.key;
         Self {
             nonce: remote_nonce,
             public_key: Curve25519Public{key: remote_public_key }

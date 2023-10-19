@@ -4,8 +4,12 @@ use dryoc::dryocbox::ByteArray;
 
 
 use utils::misc::generate_secret_key;
-use xdr::constants::{ED25519_SECRET_KEY_BYTE_LENGTH, SEED_LENGTH};
-use xdr::types::{PublicKey, Uint256, Uint512};
+
+use xdr::types::{PublicKey, Uint256};
+use crate::constants::{ED25519_SECRET_KEY_BYTE_LENGTH, SEED_LENGTH};
+
+pub type Uint512 = [u8; 64];
+
 #[derive(Debug, Clone)]
 pub struct Keychain {
     persistent_public_key: PublicKey,

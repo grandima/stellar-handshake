@@ -2,18 +2,18 @@
 use crate::lengthed_array::LengthedArray;
 
 use crate::streams::{DecodeError, ReadStream, WriteStream};
-use crate::xdr_codable::XdrCodable;
+use crate::xdr_codec::XdrCodec;
 
 #[derive(Debug)]
-pub struct XdrArchive<T: XdrCodable> (pub T);
+pub struct XdrArchive<T: XdrCodec> (pub T);
 
-impl<T: XdrCodable> XdrArchive<T> {
+impl<T: XdrCodec> XdrArchive<T> {
     pub fn new(value: T) -> Self {
         Self (value)
     }
 }
 
-impl <T: XdrCodable> XdrCodable for XdrArchive<T> {
+impl <T: XdrCodec> XdrCodec for XdrArchive<T> {
     fn encode(&self, write_stream: &mut WriteStream) {
         let res = self.0.encoded();
         write_stream.write_u32(res.len() as u32 | 0x80_00_00_00);
@@ -34,7 +34,7 @@ pub enum MessageType {
     Hello = 13,
 }
 
-impl XdrCodable for MessageType {
+impl XdrCodec for MessageType {
     fn encode(&self, write_stream: &mut WriteStream) {
         let value = *self as u32;
         value.encode(write_stream);
@@ -55,7 +55,7 @@ pub struct HmacSha256Mac {
     pub mac: Uint256,
 }
 
-impl XdrCodable for HmacSha256Mac {
+impl XdrCodec for HmacSha256Mac {
     fn encode(&self, write_stream: &mut WriteStream) {
         self.mac.encode(write_stream);
     }
@@ -69,7 +69,7 @@ pub enum EnvelopeType {
     Auth = 3,
 }
 
-impl XdrCodable for EnvelopeType {
+impl XdrCodec for EnvelopeType {
     fn encode(&self, write_stream: &mut WriteStream) {
         let value = *self as u32;
         value.encode(write_stream);
@@ -88,7 +88,7 @@ pub enum PublicKeyType {
     PublicKeyTypeEd25519 = 0,
 }
 
-impl XdrCodable for PublicKeyType {
+impl XdrCodec for PublicKeyType {
     fn encode(&self, write_stream: &mut WriteStream) {
         let value = *self as u32;
         value.encode(write_stream);
@@ -107,7 +107,7 @@ impl XdrCodable for PublicKeyType {
 pub enum PublicKey {
     PublicKeyTypeEd25519(Uint256),
 }
-impl XdrCodable for PublicKey {
+impl XdrCodec for PublicKey {
     fn encode(&self, write_stream: &mut WriteStream) {
         match self {
             PublicKey::PublicKeyTypeEd25519(value) => {

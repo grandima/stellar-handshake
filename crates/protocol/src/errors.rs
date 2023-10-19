@@ -1,7 +1,7 @@
 use thiserror::Error;
 use std::io;
+use data_encoding::DecodeError;
 use crate::connection_authentication::AuthenticationError;
-use xdr::streams::DecodeError;
 
 #[derive(Debug, Error)]
 pub enum VerificationError {

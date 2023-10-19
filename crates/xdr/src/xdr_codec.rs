@@ -1,6 +1,6 @@
 use super::streams::{DecodeError, ReadStream, WriteStream};
 
-pub trait XdrCodable: Sized {
+pub trait XdrCodec: Sized {
     fn encode(&self, write_stream: &mut WriteStream);
     fn decode<T: AsRef<[u8]>>(read_stream: &mut ReadStream<T>) -> Result<Self, DecodeError>;
 
@@ -16,7 +16,7 @@ pub trait XdrCodable: Sized {
     }
 }
 
-impl<const N: usize> XdrCodable for [u8; N] {
+impl<const N: usize> XdrCodec for [u8; N] {
     fn encode(&self, write_stream: &mut WriteStream) {
         write_stream.write_binary_data(self);
     }
@@ -27,7 +27,7 @@ impl<const N: usize> XdrCodable for [u8; N] {
     }
 }
 
-impl XdrCodable for u32 {
+impl XdrCodec for u32 {
     fn encode(&self, write_stream: &mut WriteStream) {
         write_stream.write_u32(*self);
     }
@@ -36,7 +36,7 @@ impl XdrCodable for u32 {
     }
 }
 
-impl XdrCodable for u64 {
+impl XdrCodec for u64 {
     fn encode(&self, write_stream: &mut WriteStream) {
         write_stream.write_u64(*self);
     }
@@ -46,7 +46,7 @@ impl XdrCodable for u64 {
     }
 }
 
-impl<T: XdrCodable, const N: usize> XdrCodable for [T; N] {
+impl<T: XdrCodec, const N: usize> XdrCodec for [T; N] {
     fn encode(&self, write_stream: &mut WriteStream) {
         for item in self.iter() {
             item.encode(write_stream);
