@@ -1,6 +1,6 @@
 use thiserror::Error;
 use std::io;
-use data_encoding::DecodeError;
+use xdr::DecodeError;
 use crate::connection_authentication::AuthenticationError;
 
 #[derive(Debug, Error)]
@@ -13,12 +13,19 @@ pub enum VerificationError {
 
 #[derive(Debug, Error)]
 #[error("Stellar error")]
-pub enum StellarError {
+pub enum StellarErrorImpl {
     AuthenticationError(#[from] AuthenticationError),
-    DecodeError(#[from] DecodeError),
+    #[error("Decode error")]
+    DecodeError,
     #[error("IO error: {0}")]
     IOError(#[from] io::Error),
     ConnectionResetByPeer,
     ExpectedMoreMessages,
     Verification(#[from] VerificationError),
 }
+impl From<DecodeError> for StellarErrorImpl {
+    fn from(_value: DecodeError) -> Self {
+        Self::DecodeError
+    }
+}
+

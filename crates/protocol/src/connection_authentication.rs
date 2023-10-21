@@ -62,7 +62,7 @@ impl ConnectionAuthentication {
             return Err(AuthenticationError::VerificationCertExpired)
         }
         let _signature_data = self.network_id.to_vec();
-        let signature_data = [self.network_id.as_slice(), EnvelopeType::EnvelopeTypeAuth.encoded().as_slice(), &cert.expiration.to_be_bytes(), &cert.pubkey.key].concat();
+        let signature_data = [self.network_id.as_slice(), EnvelopeType::EnvelopeTypeAuth.to_xdr().as_slice(), &cert.expiration.to_be_bytes(), &cert.pubkey.key].concat();
         let hashed = create_sha256(&signature_data);
 
         let mut sig = [0u8; 64];
@@ -100,7 +100,7 @@ impl ConnectionAuthentication {
     fn create_auth_cert_from_milisec(&mut self, milisec: u64) -> AuthCert {
         self.auth_cert_expiration = milisec + Self::AUTH_EXPIRATION_LIMIT;
         let bytes_expiration = self.auth_cert_expiration.to_be_bytes();
-        let signature_data = [self.network_id.as_slice(), EnvelopeType::EnvelopeTypeAuth.encoded().as_slice(), &bytes_expiration, &self.per_connection_pubkey.key].concat();
+        let signature_data = [self.network_id.as_slice(), EnvelopeType::EnvelopeTypeAuth.to_xdr().as_slice(), &bytes_expiration, &self.per_connection_pubkey.key].concat();
         let hashed_signature_data = create_sha256(&signature_data);
         let signed = self.keychain.sign(hashed_signature_data);
         let sig = Signature::new(signed.to_vec()).unwrap();

@@ -7,7 +7,7 @@ use xdr::compound_types::LimitedString;
 pub struct NodeConfig {
     pub node_info: NodeInfo,
     pub ip: String,
-    pub listening_port: u32,
+    pub listening_port: i32,
 }
 #[allow(dead_code)]
 impl NodeConfig {
@@ -50,7 +50,7 @@ impl NodeInfo {
             ledger_version: 19,
             overlay_version: 29,
             overlay_min_version: 27,
-            version_string: LimitedString::new("v19.13.0".into()).unwrap(),
+            version_string: LimitedString::new("v19.13.0".as_bytes().to_vec()).unwrap(),
             network_id: "Test SDF Network ; September 2015".to_string(),
         }
     }
@@ -59,7 +59,7 @@ impl NodeInfo {
             ledger_version: 19,
             overlay_version: 29,
             overlay_min_version: 27,
-            version_string: "v19.13.0".try_into().unwrap(),
+            version_string: LimitedString::new("v19.13.0".as_bytes().to_vec()).unwrap(),
             network_id: "Public Global Stellar Network ; September 2015".to_string(),
         }
     }

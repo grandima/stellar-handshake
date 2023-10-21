@@ -1,9 +1,21 @@
-use std::error::Error;
+
 use anyhow::Result;
+use thiserror::Error;
 
 use xdr::compound_types::XdrArchive;
 use xdr::{ReadStream, XdrCodec};
-trait StellarError: Error + Sized {}
+
+#[derive(Debug, Error)]
+#[error("Generic decode error")]
+pub enum DecodeError {
+    DecodeError
+}
+impl From<xdr::DecodeError> for DecodeError {
+    fn from(_: xdr::DecodeError) -> Self {
+        //This need to be handled accordingly with `match` over all cases
+        Self::DecodeError
+    }
+}
 
 pub trait Protocol: Sized {
     type Message: ProtocolMessage;
@@ -15,22 +27,28 @@ pub trait Protocol: Sized {
 }
 
 pub trait ProtocolMessage: XdrCodec + Sized {
-    fn has_complete_message(buf: &[u8]) -> Result<bool>;
-    fn decoded<T: AsRef<[u8]>>(bytes: T) -> Result<(Self, usize)> {
-        Ok(<Self as XdrCodec>::decoded(bytes).unwrap())
+    fn complete_message_size(buf: &[u8]) -> Option<usize>;
+    fn decoded<T: AsRef<[u8]>>(bytes: T) -> Result<(Self, usize), DecodeError> {
+        let mut read_stream = ReadStream::new(bytes);
+        let result = <Self as XdrCodec>::from_xdr_buffered(&mut read_stream)?;
+        Ok((result, read_stream.get_position()))
     }
-    fn encoded(&self) -> Vec<u8> {
-        <Self as XdrCodec>::encoded(self)
+    fn to_xdr(&self) -> Vec<u8> {
+        <Self as XdrCodec>::to_xdr(self)
     }
 }
 
 impl <T: XdrCodec> ProtocolMessage for XdrArchive<T> {
-    fn has_complete_message(buf: &[u8]) -> Result<bool> {
+    fn complete_message_size(buf: &[u8]) -> Option<usize> {
         if buf.len() < 4 {
-            return Ok(false);
+            return None;
         }
-        let length = ReadStream::new(buf).read_length(true).unwrap() ;
-        Ok(length + 4 <= buf.len())
+        let length = 4 + (ReadStream::new(buf).read_next_u32().unwrap_or(0) as usize & 0x7f_ff_ff_ff);
+        if length <= buf.len() {
+            Some(length)
+        } else {
+            None
+        }
     }
 }
 

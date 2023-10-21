@@ -33,7 +33,7 @@ The "Hello" message incorporates various data types, including raw data that is 
 3. `persistent_public_key`
 4. `local_nonce = sha256(random bytes[32])`.
 
-Following the construction, archive the message using `bytes_to_send = archive(hello message.encoded())`.\
+Following the construction, archive the message using `bytes_to_send = archive(hello message.to_xdr())`.\
 Send the archive over TCP.
 
 Next, await the node's archived "Hello" message.\
@@ -64,23 +64,23 @@ For both `sending_mac_key` and `receiving_mac_key` generation:
 
 ## Constructing the "Auth" Message
 
-1. Encode "Auth" message `message.encoded()`
+1. Encode "Auth" message `message.to_xdr()`
 2. All archived messages, but not the one that contains "Hello" message, have `sequence` and `mac` properties that need to be verified upon receiving. For MAC generation:
-    1. create a `message = [local_sequence + message.encoded()]`.
+    1. create a `message = [local_sequence + message.to_xdr()]`.
     2. Compute the MAC: `mac = create_sha256_hmac(data, sending_mac_key)`.
 
 
-Archive the message `bytes_to_send = archive(local_sequence, auth message.encoded(), mac)` and transmit it over TCP. \
+Archive the message `bytes_to_send = archive(local_sequence, auth message.to_xdr(), mac)` and transmit it over TCP. \
 Increment `local_sequence` by one.
 
 Receive the node's archived "Auth" message. \
-Unarchive `received_bytes` into its components: `(unarchived_remote_sequence, message.encoded(), mac) = unarchive(received_bytes)`.
+Unarchive `received_bytes` into its components: `(unarchived_remote_sequence, message.to_xdr(), mac) = unarchive(received_bytes)`.
 
 ## Verifying the unarchived message
 
 The unarchived message is verified by doing the following:
 1. `unarchived_remote_sequence == remote_sequence`.
-2. Verify hmac by checking `verify_sha256_hmac(mac, receiving_mac_key, message.encoded())`. 
+2. Verify hmac by checking `verify_sha256_hmac(mac, receiving_mac_key, message.to_xdr())`. 
 
 Increment `remote_sequence` by one if we want to send and receive any further messages.
 

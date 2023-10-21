@@ -3,7 +3,7 @@ use std::net::SocketAddr;
 use bytes::BytesMut;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
-use protocol::errors::StellarError;
+use protocol::errors::StellarErrorImpl;
 use protocol::protocol::{Protocol, ProtocolMessage};
 use anyhow::Result;
 pub struct Connection<P: Protocol> {
@@ -29,7 +29,7 @@ impl<P: Protocol> Connection<P> {
     pub async fn connect(
         protocol: P,
         addr: SocketAddr,
-    ) -> Result<Connection<P>, StellarError> {
+    ) -> Result<Connection<P>, StellarErrorImpl> {
         let socket = TcpStream::connect(addr).await?;
         Ok(Connection::new(protocol, socket))
     }
@@ -43,7 +43,7 @@ impl<P: Protocol> Connection<P> {
                         return if self.read_buffer.is_empty() {
                             Ok(None)
                         } else {
-                            Err(StellarError::ConnectionResetByPeer.into())
+                            Err(StellarErrorImpl::ConnectionResetByPeer.into())
                         };
                     }
                 },
@@ -55,8 +55,8 @@ impl<P: Protocol> Connection<P> {
     }
 
     fn parse_message(&mut self) -> Result<Option<(P::Message, Vec<u8>)>> {
-        if P::Message::has_complete_message(self.read_buffer.as_ref())? {
-            let (message, size) = P::Message::decoded(self.read_buffer.as_ref())?;
+        if let Some(size) = P::Message::complete_message_size(self.read_buffer.as_ref()) {
+            let (message, size) = P::Message::decoded(self.read_buffer[..size].as_ref())?;
             let raw_message = self.read_buffer.split_to(size);
             Ok(Some((message, raw_message[4..].to_vec())))
         } else {
@@ -64,8 +64,8 @@ impl<P: Protocol> Connection<P> {
         }
     }
 
-    pub async fn send(&mut self, message: P::Message) -> Result<(), StellarError> {
-        let encoded = message.encoded();
+    pub async fn send(&mut self, message: P::Message) -> Result<(), StellarErrorImpl> {
+        let encoded = message.to_xdr();
         if let Err(e) = self.socket.write(&encoded).await {
             return Err(e.into());
         }
