@@ -17,3 +17,6 @@ tokio = {workspace = true}
 bytes = {workspace = true}
 utils = {path = "../utils" }
 protocol = {path = "../protocol" }
+simple_logger = "4"
+log = "0.4"
+

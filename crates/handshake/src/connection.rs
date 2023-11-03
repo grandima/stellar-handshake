@@ -3,7 +3,7 @@ use std::net::SocketAddr;
 use bytes::BytesMut;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
-use protocol::errors::StellarErrorImpl;
+use protocol::errors::StellarError;
 use protocol::protocol::{Protocol, ProtocolMessage};
 use anyhow::Result;
 pub struct Connection<P: Protocol> {
@@ -29,7 +29,7 @@ impl<P: Protocol> Connection<P> {
     pub async fn connect(
         protocol: P,
         addr: SocketAddr,
-    ) -> Result<Connection<P>, StellarErrorImpl> {
+    ) -> Result<Connection<P>, StellarError> {
         let socket = TcpStream::connect(addr).await?;
         Ok(Connection::new(protocol, socket))
     }
@@ -43,7 +43,7 @@ impl<P: Protocol> Connection<P> {
                         return if self.read_buffer.is_empty() {
                             Ok(None)
                         } else {
-                            Err(StellarErrorImpl::ConnectionResetByPeer.into())
+                            Err(StellarError::ConnectionResetByPeer.into())
                         };
                     }
                 },
@@ -64,7 +64,7 @@ impl<P: Protocol> Connection<P> {
         }
     }
 
-    pub async fn send(&mut self, message: P::Message) -> Result<(), StellarErrorImpl> {
+    pub async fn send(&mut self, message: P::Message) -> Result<(), StellarError> {
         let encoded = message.to_xdr();
         if let Err(e) = self.socket.write(&encoded).await {
             return Err(e.into());

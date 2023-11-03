@@ -8,6 +8,8 @@ use std::error::Error;
 
 
 use dryoc::rng::copy_randombytes;
+use simple_logger::SimpleLogger;
+use log::{info, LevelFilter};
 use protocol::protocol::Protocol;
 use connection::Connection;
 use crate::handshake::execute_handshake;
@@ -18,6 +20,11 @@ use utils::misc::{generate_nonce, get_current_u64_milliseconds};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
+    SimpleLogger::new()
+        .with_level(LevelFilter::Trace)
+        .with_colors(true)
+        .init()
+        .unwrap();
     let keychain = Keychain::from_random_seed();
     let node_config = NodeConfig::mainnet();
     let mut per_connection_secret_key = [0u8; 32];
@@ -31,6 +38,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
 async fn on_server_connection<P: Protocol>(server_connection: &mut Connection<P>) {
     let negotiated = execute_handshake(server_connection).await;
-    println!("Handshake result: {:?}", negotiated);
+    info!("handshake negotiated: {:#?}", negotiated);
 }
 

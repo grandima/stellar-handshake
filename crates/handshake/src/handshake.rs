@@ -2,7 +2,7 @@ use crate::connection::Connection;
 use protocol::protocol::Protocol;
 use protocol::protocol::HandshakeMessageExtract;
 use anyhow::Result;
-use protocol::errors::StellarErrorImpl;
+use protocol::errors::StellarError;
 pub async fn execute_handshake<P: Protocol>(
     connection: &mut Connection<P>,
 ) -> Result<bool> {
@@ -18,7 +18,7 @@ pub async fn execute_handshake<P: Protocol>(
                 HandshakeMessageExtract::Auth => {return Ok(true);}
             },
             None => {
-                return Err(StellarErrorImpl::ExpectedMoreMessages.into());
+                return Err(StellarError::ExpectedMoreMessages.into());
             }
         }
     }

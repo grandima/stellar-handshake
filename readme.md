@@ -7,7 +7,7 @@ https://github.com/stellar/stellar-core)
 The app is minimalistic. By default, it connects to a hardcoded [MAINNET stellar node](https://stellarbeat.io/nodes/GAAV2GCVFLNN522ORUYFV33E76VPC22E72S75AQ6MBR5V45Z5DWVPWEU?center=1), executes handshake, prints the result and ends.
 
 To run this app:
-1. `rust version 1.71`
+1. `rust nightly >= 1.71`
 2. `cargo run`
 
 To understand the handshake process, refer to [handshake](handshake.md) in the root of the project.

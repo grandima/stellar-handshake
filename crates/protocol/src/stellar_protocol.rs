@@ -1,7 +1,7 @@
 
 use crate::connection_authentication::ConnectionAuthentication;
 use crate::node_config::NodeConfig;
-use crate::errors::{StellarErrorImpl, VerificationError};
+use crate::errors::{StellarError, VerificationError};
 use crate::remote_node_info::RemoteNodeInfo;
 use crate::errors::VerificationError::{MacKey, SequenceMismatch};
 use crate::protocol::Protocol;
@@ -70,7 +70,7 @@ impl <F: Fn() -> u64> StellarProtocol<F> {
 
 impl <F: Fn() -> u64> Protocol for StellarProtocol<F> {
     type Message = XdrArchive<AuthenticatedMessage>;
-    type MessageExtract = Result<HandshakeMessageExtract, StellarErrorImpl>;
+    type MessageExtract = Result<HandshakeMessageExtract, StellarError>;
     type NodeInfo = RemoteNodeInfo;
     fn create_hello_message(&mut self) -> XdrArchive<AuthenticatedMessage> {
         let hello = Hello {
