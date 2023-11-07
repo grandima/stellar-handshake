@@ -61,13 +61,12 @@ impl ConnectionAuthentication {
         if expiration < (time / 1000) {
             return Err(AuthenticationError::VerificationCertExpired)
         }
-        let _signature_data = self.network_id.to_vec();
         let signature_data = [self.network_id.as_slice(), EnvelopeType::EnvelopeTypeAuth.to_xdr().as_slice(), &cert.expiration.to_be_bytes(), &cert.pubkey.key].concat();
-        let hashed = create_sha256(&signature_data);
+        let message = create_sha256(&signature_data);
 
         let mut sig = [0u8; 64];
         sig.copy_from_slice(cert.sig.get_vec());
-        crypto_sign_verify_detached(&sig, &hashed, remote_public_key).map_err(|_| AuthenticationError::VerificationSignature)
+        crypto_sign_verify_detached(&sig, &message, remote_public_key).map_err(|_| AuthenticationError::VerificationSignature)
     }
     /// `we_called_remote` parameter can be replaced with enum for a better readability and data-driven approach
     pub fn mac_key(&mut self,

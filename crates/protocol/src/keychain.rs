@@ -1,7 +1,7 @@
 use data_encoding::BASE32;
 use dryoc::classic::crypto_sign::{crypto_sign_detached, crypto_sign_seed_keypair};
 use dryoc::dryocbox::ByteArray;
-
+use xdr::encode_stellar_key;
 
 use utils::misc::generate_secret_key;
 
@@ -61,6 +61,10 @@ impl From<&[u8; SEED_LENGTH]> for Keychain {
             signing_key
         }
     }
+}
+
+pub fn encoded_random_seed() -> String {
+    String::from_utf8(encode_stellar_key(&generate_secret_key(), xdr::ED25519_SECRET_SEED_VERSION_BYTE)).unwrap_or_default()
 }
 
 #[derive(Debug, thiserror::Error)]

@@ -15,3 +15,4 @@ xdr = {git = "https://github.com/grandima/substrate-stellar-sdk.git", package = 
 thiserror = {workspace = true}
 data-encoding = {workspace = true}
 anyhow = {workspace = true}
+serde = "1.0.189"

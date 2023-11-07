@@ -19,4 +19,7 @@ utils = {path = "../utils" }
 protocol = {path = "../protocol" }
 simple_logger = "4"
 log = "0.4"
-
+confy = "0.5"
+serde = { version = "1.0.189", features = ["derive"] }
+config = { version = "0.13.3", features = [] }
+serde-aux = "4.2.0"

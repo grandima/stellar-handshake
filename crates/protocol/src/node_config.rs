@@ -1,9 +1,12 @@
+use std::fmt::Debug;
 use std::net::SocketAddr;
 use std::str::FromStr;
 use xdr::compound_types::LimitedString;
+use serde::de::{Error, Deserialize, Deserializer};
+use crate::errors::StellarError;
 
 #[allow(dead_code)]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Deserialize)]
 pub struct NodeConfig {
     pub node_info: NodeInfo,
     pub ip: String,
@@ -35,14 +38,25 @@ impl NodeConfig {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Deserialize)]
 pub struct NodeInfo {
     pub ledger_version: u32,
     pub overlay_version: u32,
     pub overlay_min_version: u32,
+    #[serde(deserialize_with = "limited_string")]
     pub version_string: LimitedString<100>,
     pub network_id: String,
 }
+
+fn limited_string<'de, D>(deserializer: D) -> Result<LimitedString<100>, D::Error>
+    where
+        D: Deserializer<'de>,
+{
+    let s: String = Deserialize::deserialize(deserializer)?;
+    // do better hex decoding than this
+    LimitedString::new(s.into()) .map_err(|e| D::Error::custom(StellarError::from(e)))
+}
+
 #[allow(dead_code)]
 impl NodeInfo {
     fn local() -> Self {
