@@ -12,7 +12,7 @@ use protocol::protocol::Protocol;
 use connection::Connection;
 use crate::handshake::execute_handshake;
 use protocol::connection_authentication::ConnectionAuthentication;
-use protocol::keychain::{Keychain, encoded_random_seed};
+use protocol::keychain::{Keychain};
 use protocol::stellar_protocol::StellarProtocol;
 
 use utils::misc::{generate_nonce, get_current_u64_milliseconds};
@@ -39,13 +39,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .build()?;
     let node_config = settings.try_deserialize::<NodeConfig>().unwrap();
 
-
     SimpleLogger::new()
         .with_level(LevelFilter::Trace)
         .with_colors(true)
         .init()
         .unwrap();
-    let keychain = Keychain::try_from(encoded_random_seed().as_str()).unwrap();
+    let keychain = Keychain::from_random_seed();
     let mut per_connection_secret_key = [0u8; 32];
     copy_randombytes(&mut per_connection_secret_key);
     let authentication = ConnectionAuthentication::new(keychain, &node_config.node_info.network_id, per_connection_secret_key);

@@ -1,0 +1,8 @@
+ip: 35.233.35.143
+listening_port: 11625
+node_info:
+  ledger_version: 19
+  network_id: "Public Global Stellar Network ; September 2015"
+  overlay_min_version: 27
+  overlay_version: 29
+  version_string: v19.13.0

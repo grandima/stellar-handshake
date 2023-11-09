@@ -11,7 +11,7 @@ path = "src/lib.rs"
 dryoc = { workspace = true }
 ring = { workspace = true }
 utils = {path = "../utils" }
-xdr = {git = "https://github.com/grandima/substrate-stellar-sdk.git", package = "substrate-stellar-sdk", features = ["all-types", "default"]}
+xdr = {path = "../xdr" }
 thiserror = {workspace = true}
 data-encoding = {workspace = true}
 anyhow = {workspace = true}
