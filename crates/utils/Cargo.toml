@@ -10,3 +10,4 @@ path = "src/lib.rs"
 [dependencies]
 dryoc = { workspace = true }
 ring = { workspace = true }
+data-encoding = {workspace = true}

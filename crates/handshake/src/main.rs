@@ -15,8 +15,10 @@ use protocol::connection_authentication::ConnectionAuthentication;
 use protocol::keychain::{Keychain};
 use protocol::stellar_protocol::StellarProtocol;
 
-use utils::misc::{generate_nonce, get_current_u64_milliseconds};
+use utils::misc::{generate_encoded_seed, generate_nonce, get_current_u64_milliseconds};
 use serde_aux::field_attributes::deserialize_number_from_string;
+
+
 #[derive(serde::Deserialize, Clone)]
 pub struct Settings {
     pub application: ApplicationSettings,
@@ -30,6 +32,7 @@ pub struct ApplicationSettings {
 }
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
+    //implement loading a private key from string
     let base_path = std::env::current_dir().expect("Failed to determine the current directory");
     let configuration_directory = base_path.join("configuration");
     let settings = config::Config::builder()
@@ -44,7 +47,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .with_colors(true)
         .init()
         .unwrap();
-    let keychain = Keychain::from_random_seed();
+    let keychain = Keychain::try_from(generate_encoded_seed().as_str()).unwrap();
     let mut per_connection_secret_key = [0u8; 32];
     copy_randombytes(&mut per_connection_secret_key);
     let authentication = ConnectionAuthentication::new(keychain, &node_config.node_info.network_id, per_connection_secret_key);

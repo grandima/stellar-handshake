@@ -286,7 +286,7 @@ impl XdrCodec for AuthenticatedMessage {
     fn encode(&self, write_stream: &mut WriteStream) {
         match self {
             AuthenticatedMessage::V0(value) => {
-                (0 as u32).encode(write_stream);
+                0_u32.encode(write_stream);
                 value.encode(write_stream)
             },
         }

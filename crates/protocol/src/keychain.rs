@@ -2,7 +2,7 @@ use data_encoding::BASE32;
 use dryoc::classic::crypto_sign::{crypto_sign_detached, crypto_sign_seed_keypair};
 use dryoc::dryocbox::ByteArray;
 
-use utils::misc::generate_secret_key;
+
 
 use xdr::types::{PublicKey, Uint256};
 use crate::constants::{ED25519_SECRET_KEY_BYTE_LENGTH, SEED_LENGTH};
@@ -16,10 +16,6 @@ pub struct Keychain {
 }
 
 impl Keychain {
-    pub fn from_random_seed() -> Self {
-        let seed = generate_secret_key();
-        Self::from(&seed)
-    }
     pub fn sign(&self, message: impl AsRef<[u8]>) -> Uint512 {
         let mut signature = [0u8; ED25519_SECRET_KEY_BYTE_LENGTH];
         crypto_sign_detached(&mut signature, message.as_ref(), &self.signing_key).unwrap_or_default();

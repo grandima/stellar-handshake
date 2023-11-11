@@ -96,8 +96,7 @@ impl <F: Fn() -> u64> Protocol for StellarProtocol<F> {
     }
     fn handle_message(&mut self, result: (&XdrArchive<AuthenticatedMessage>, Vec<u8>)) -> Result<HandshakeMessageExtract> {
         let binding = result.0.get_vec().first();
-        let AuthenticatedMessage::V0(message) = &binding.unwrap()
-            else { todo!() };
+        let AuthenticatedMessage::V0(message) = &binding.unwrap();
         if let StellarMessage::Hello(hello) = &message.message {
             self.authentication.verify_cert((self.time_provider)(), hello.peer_id.as_binary(), &hello.cert)?;
             self.local_sequence = 0;
