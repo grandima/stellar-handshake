@@ -1,9 +1,6 @@
 use data_encoding::BASE32;
 use dryoc::classic::crypto_sign::{crypto_sign_detached, crypto_sign_seed_keypair};
 use dryoc::dryocbox::ByteArray;
-
-
-
 use xdr::types::{PublicKey, Uint256};
 use crate::constants::{ED25519_SECRET_KEY_BYTE_LENGTH, SEED_LENGTH};
 

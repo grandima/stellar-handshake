@@ -15,7 +15,7 @@ use xdr::compound_types::XdrArchive;
 use xdr::XdrCodec;
 use crate::constants::SHA256_LENGTH;
 
-pub struct StellarProtocol<F: Fn() -> u64> {
+pub struct StellarProtocol {
     node_config: NodeConfig,
     authentication: ConnectionAuthentication,
     local_nonce: Uint256,
@@ -24,11 +24,11 @@ pub struct StellarProtocol<F: Fn() -> u64> {
     remote_sequence: u64,
     sending_mac_key: Option<Vec<u8>>,
     receiving_mac_key: Option<Vec<u8>>,
-    time_provider: F
+    time_provider: Box<dyn Fn() -> u64>
 }
 
-impl <F: Fn() -> u64> StellarProtocol<F> {
-    pub fn new(node_config: NodeConfig, local_nonce: Uint256, authentication: ConnectionAuthentication, time_provider: F) -> Self {
+impl StellarProtocol {
+    pub fn new(node_config: NodeConfig, local_nonce: Uint256, authentication: ConnectionAuthentication, time_provider: Box<dyn Fn() -> u64>) -> Self {
         Self {
             node_config,
             authentication,
@@ -36,7 +36,7 @@ impl <F: Fn() -> u64> StellarProtocol<F> {
             sending_mac_key: None,
             local_sequence: 0,
             remote_sequence: 0,
-            time_provider,
+            time_provider: Box::new(time_provider),
             receiving_mac_key: None,
         }
     }
@@ -68,7 +68,7 @@ impl <F: Fn() -> u64> StellarProtocol<F> {
     }
 }
 
-impl <F: Fn() -> u64> Protocol for StellarProtocol<F> {
+impl Protocol for StellarProtocol {
     type Message = XdrArchive<AuthenticatedMessage>;
     type MessageExtract = Result<HandshakeMessageExtract, StellarError>;
     type NodeInfo = RemoteNodeInfo;
